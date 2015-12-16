@@ -1,0 +1,28 @@
+# for server and handlers
+git+https://github.com/LTD-Beget/beget_msgpack_py3
+git+https://github.com/LTD-Beget/setproctitle.git
+git+https://github.com/LTD-Beget/psutil.git
+
+# for listing mtime
+tzlocal
+
+# for auth
+python-pam
+redis
+
+# for archives
+git+https://github.com/LTD-Beget/python-libarchive-py3.git
+rarfile
+pyinotify
+pylzma
+cython
+
+# for editor and finder
+binaryornot
+chardet
+
+# for ftp
+ftputil
+
+# for transfer files
+pysendfile
