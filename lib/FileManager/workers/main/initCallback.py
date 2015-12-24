@@ -36,6 +36,7 @@ class InitCallback(BaseWorkerCustomer):
 
     def get_ftp_connections(self):
         db = sqlite3.connect(DB_FILE)
+        db.execute("PRAGMA journal_mode=MEMORY")
         print("Database created and opened successfully file = %s" % DB_FILE)
 
         cursor = db.cursor()

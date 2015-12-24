@@ -1,4 +1,5 @@
-FROM beget/fmcore-python
+FROM beget/sprutio-python
+MAINTAINER "Maksim Losev <mlosev@beget.ru>"
 
 RUN apt-get install --no-install-recommends -qq -y \
     unzip zip
