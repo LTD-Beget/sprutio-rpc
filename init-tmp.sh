@@ -1,6 +1,6 @@
-#!/usr/bin/with-contenv sh
+#!/usr/bin/with-contenv bash
 set -e
 
 cd /tmp
 mkdir -p fm
-chmod 777 fm
+chmod 1777 fm

@@ -2,7 +2,7 @@
 set -e
 
 # use passwd|group|shadow from host
-PREFIX=/mnt/etc
+PREFIX=${FM_RPC_ROOT_MOUNT_POINT:-/mnt}/etc
 
 for FILE in passwd group shadow; do
     if [[ -f ${PREFIX}/$FILE && -f /etc/$FILE ]]; then

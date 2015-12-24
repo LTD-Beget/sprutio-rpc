@@ -84,12 +84,14 @@ class LocalController(Controller):
 
     def action_download_files(self, login, password, paths, mode):
 
-        return self.get_process_data(DownloadFiles, {
+        params = {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
             "paths": byte_to_unicode_list(paths),
-            "mode": mode.decode('UTF-8')
-        }, timeout=7200)
+            "mode": mode.decode('UTF-8'),
+        }
+
+        return self.get_process_data(DownloadFiles, params, timeout=7200)
 
     def action_read_images(self, login, password, paths):
 
@@ -101,13 +103,15 @@ class LocalController(Controller):
 
     def action_upload_file(self, login, password, path, file_path, overwrite):
 
-        return self.get_process_data(UploadFile, {
+        params = {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
             "path": path.decode('UTF-8'),
             "file_path": file_path.decode('UTF-8'),
-            "overwrite": overwrite
-        }, timeout=7200)
+            "overwrite": overwrite,
+        }
+
+        return self.get_process_data(UploadFile, params, timeout=7200)
 
     @staticmethod
     def run_subprocess(logger, worker_object, status_id, name, params):

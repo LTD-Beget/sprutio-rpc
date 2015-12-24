@@ -34,6 +34,7 @@ class RemoveConnection(BaseWorkerCustomer):
 
     def remove_ftp_connection(self):
         db = sqlite3.connect(DB_FILE)
+        db.execute("PRAGMA journal_mode=MEMORY")
         print("Database created and opened successfully file = %s" % DB_FILE)
 
         cursor = db.cursor()

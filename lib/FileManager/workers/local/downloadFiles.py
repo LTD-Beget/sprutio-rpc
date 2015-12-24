@@ -11,16 +11,35 @@ class DownloadFiles(BaseWorkerCustomer):
     def __init__(self, paths, mode, *args, **kwargs):
         super(DownloadFiles, self).__init__(*args, **kwargs)
 
+        self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
+
         self.paths = paths
         self.mode = mode
 
+
+    def _prepare(self):
+        if os.path.islink(self.download_dir):
+            raise Exception('Symlinks are not allowed!')
+
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
+        pw = self._get_login_pw()
+
+        os.lchown(os.path.dirname(self.download_dir), pw.pw_uid, pw.pw_gid)
+        os.lchown(self.download_dir, pw.pw_uid, pw.pw_gid)
+
+
     def run(self):
         try:
+            # prepare download dir
+            self._prepare()
+
+            # drop privileges
             self.preload()
             self.logger.info("DownloadFiles process run")
 
-            download_dir = TMP_DIR + '/' + self.login + '/' + self.random_hash() + '/'
-            success_paths, error_paths = self.copy_files_to_tmp(download_dir)
+            success_paths, error_paths = self.copy_files_to_tmp(self.download_dir)
 
             if len(success_paths) == 1:
                 one_file = True
@@ -35,9 +54,9 @@ class DownloadFiles(BaseWorkerCustomer):
             if len(error_paths) == 0:  # Значит все хорошо, можно дальше обрабатывать
                 if one_file is True:
                     if self.mode == "default":
-                        download_path = os.path.join(download_dir, os.path.basename(success_paths[0]))
+                        download_path = os.path.join(self.download_dir, os.path.basename(success_paths[0]))
                     else:
-                        download_path = download_dir.rstrip("/")
+                        download_path = self.download_dir.rstrip("/")
                         files_path = download_path
                         os.chdir(os.path.dirname(download_path))
 
@@ -51,7 +70,7 @@ class DownloadFiles(BaseWorkerCustomer):
                             tar_util = self.get_util('tar')
                             download_path += '.tar.gz'
                             return_code = subprocess.call(
-                                    [tar_util, '-zcvf', download_path, os.path.basename(files_path)])
+                                    [tar_util, '-czf', download_path, os.path.basename(files_path)])
                             if return_code != 0:
                                 raise Exception("Tar Error")
 
@@ -59,7 +78,7 @@ class DownloadFiles(BaseWorkerCustomer):
                             tar_util = self.get_util('tar')
                             download_path += '.tar'
                             return_code = subprocess.call(
-                                    [tar_util, '-cvf', download_path, os.path.basename(files_path)])
+                                    [tar_util, '-cf', download_path, os.path.basename(files_path)])
                             if return_code != 0:
                                 raise Exception("Tar Error")
 
@@ -67,11 +86,11 @@ class DownloadFiles(BaseWorkerCustomer):
                             tar_util = self.get_util('tar')
                             download_path += '.bz2'
                             return_code = subprocess.call(
-                                    [tar_util, '-jcvf', download_path, os.path.basename(files_path)])
+                                    [tar_util, '-cjf', download_path, os.path.basename(files_path)])
                             if return_code != 0:
                                 raise Exception("Tar Error")
                 else:
-                    download_path = download_dir.rstrip("/")
+                    download_path = self.download_dir.rstrip("/")
                     files_path = download_path
                     os.chdir(os.path.dirname(download_path))
 
@@ -85,21 +104,21 @@ class DownloadFiles(BaseWorkerCustomer):
                     if self.mode == 'gzip':
                         tar_util = self.get_util('tar')
                         download_path += '.tar.gz'
-                        return_code = subprocess.call([tar_util, '-zcvf', download_path, os.path.basename(files_path)])
+                        return_code = subprocess.call([tar_util, '-czf', download_path, os.path.basename(files_path)])
                         if return_code != 0:
                             raise Exception("Tar Error")
 
                     if self.mode == 'tar':
                         tar_util = self.get_util('tar')
                         download_path += '.tar'
-                        return_code = subprocess.call([tar_util, '-cvf', download_path, os.path.basename(files_path)])
+                        return_code = subprocess.call([tar_util, '-cf', download_path, os.path.basename(files_path)])
                         if return_code != 0:
                             raise Exception("Tar Error")
 
                     if self.mode == 'bz2':
                         tar_util = self.get_util('tar')
                         download_path += '.bz2'
-                        return_code = subprocess.call([tar_util, '-jcvf', download_path, os.path.basename(files_path)])
+                        return_code = subprocess.call([tar_util, '-cjf', download_path, os.path.basename(files_path)])
                         if return_code != 0:
                             raise Exception("Tar Error")
 
@@ -148,7 +167,7 @@ class DownloadFiles(BaseWorkerCustomer):
         for path in self.paths:
             try:
                 abs_path = self.get_abs_path(path)
-                source_path = os.path.dirname(path)
+                source_path = os.path.dirname(abs_path)
                 file_basename = os.path.basename(abs_path)
 
                 if os.path.isdir(abs_path):
@@ -157,8 +176,6 @@ class DownloadFiles(BaseWorkerCustomer):
                     if not os.path.exists(destination):
                         st = os.stat(abs_path)
                         os.makedirs(destination, stat.S_IMODE(st.st_mode))
-                    else:
-                        raise Exception("destination already exist")
 
                     for current, dirs, files in os.walk(abs_path):
                         relative_root = os.path.relpath(current, source_path)
@@ -168,22 +185,14 @@ class DownloadFiles(BaseWorkerCustomer):
                             if not os.path.exists(target_dir):
                                 st = os.stat(source_dir)
                                 os.makedirs(target_dir, stat.S_IMODE(st.st_mode))
-                            else:
-                                raise Exception("destination dir already exists")
                         for f in files:
                             source_file = os.path.join(current, f)
                             target_file = os.path.join(target_path, relative_root, f)
-                            if not os.path.exists(target_file):
-                                shutil.copy(source_file, target_file)
-                            else:
-                                raise Exception("destination file already exists")
+                            shutil.copy(source_file, target_file)
                 elif os.path.isfile(abs_path):
                     try:
                         target_file = os.path.join(target_path, file_basename)
-                        if not os.path.exists(target_file):
-                            shutil.copy(abs_path, target_file)
-                        else:
-                            raise Exception("destination file already exists")
+                        shutil.copy(abs_path, target_file)
                     except Exception as e:
                         self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))
                         raise e
