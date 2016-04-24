@@ -40,7 +40,13 @@ class RemoveConnection(BaseWorkerCustomer):
         cursor = db.cursor()
 
         try:
+            self.logger.info("Removing connection with id %s by user %s" % (self.connection_id, self.login))
+
             cursor.execute("DELETE FROM ftp_servers WHERE id = ? AND fm_login = ?", (self.connection_id, self.login))
+
+            db.commit()
+            if cursor.rowcount < 1:
+                raise Exception("FTP connection deleting failed")
 
             status = {
                 "status": True
