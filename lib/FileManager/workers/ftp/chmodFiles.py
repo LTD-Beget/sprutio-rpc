@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
 import traceback
@@ -6,7 +6,7 @@ import threading
 import time
 
 
-class ChmodFiles(BaseWorkerCustomer):
+class ChmodFiles(MainWorkerCustomer):
     def __init__(self, params, session, *args, **kwargs):
         super(ChmodFiles, self).__init__(*args, **kwargs)
 

@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FM import Module, Action
 from lib.FileManager.FTPConnection import FTPConnection
 import traceback
@@ -6,7 +6,7 @@ import threading
 import os
 
 
-class InitSession(BaseWorkerCustomer):
+class InitSession(MainWorkerCustomer):
     def __init__(self, path, session, *args, **kwargs):
         super(InitSession, self).__init__(*args, **kwargs)
 
@@ -29,6 +29,7 @@ class InitSession(BaseWorkerCustomer):
                 "traceback": None
             }
             self.on_success(result)
+            return result
 
         except Exception as e:
             result = {
@@ -47,7 +48,7 @@ class InitSession(BaseWorkerCustomer):
                 Action.COPY: True,
                 Action.COPY_ENTRY: True,
                 Action.COPY_PATH: True,
-                Action.CREATE_ARCHIVE: True,
+
                 Action.CREATE_COPY: True,
                 Action.DOWNLOAD_ARCHIVE: True,
                 Action.DOWNLOAD_BZ2: True,
@@ -56,10 +57,13 @@ class InitSession(BaseWorkerCustomer):
                 Action.DOWNLOAD_TAR: True,
                 Action.DOWNLOAD_ZIP: True,
                 Action.EDIT: True,
-                Action.HELP: True,
                 Action.HOME: True,
                 Action.HTPASSWD: False,
-                Action.IP_BLOCK: True,
+
+                Action.IP_BLOCK: False,
+                Action.CREATE_ARCHIVE: True,
+                Action.HELP: True,
+
                 Action.LOCAL: False,
                 Action.LOGOUT: False,
                 Action.MOVE: True,
@@ -133,15 +137,13 @@ class InitSession(BaseWorkerCustomer):
 
         if self.session_type == Module.HOME:
             path = self.path if self.path is not None else self.get_home_dir()
-            abs_path = self.get_abs_path(path)
-            items = []
-            self.__list_recursive(abs_path, items, 1)
-            result = {
-                'path': self.get_rel_path(abs_path),
-                'items': items
-            }
 
-            return result
+            while not self.ssh_manager.exists(path):
+                path = os.path.dirname(path)
+                if path == "/":
+                    break
+
+            return self.ssh_manager.list(path=path)
 
         if self.session_type == Module.PUBLIC_FTP:
             self.logger.info("FTP Listing preload")

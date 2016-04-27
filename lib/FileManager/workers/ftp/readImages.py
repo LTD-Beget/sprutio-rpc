@@ -1,11 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from config.main import TMP_DIR
 import traceback
 import os
 
 
-class ReadImages(BaseWorkerCustomer):
+class ReadImages(MainWorkerCustomer):
     def __init__(self, paths, session, *args, **kwargs):
         super(ReadImages, self).__init__(*args, **kwargs)
 

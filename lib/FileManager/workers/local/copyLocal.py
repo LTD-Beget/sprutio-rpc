@@ -1,5 +1,7 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FM import REQUEST_DELAY
+from config.main import TMP_DIR
+
 import os
 import traceback
 import threading
@@ -8,7 +10,7 @@ import time
 import stat
 
 
-class CopyLocal(BaseWorkerCustomer):
+class CopyLocal(MainWorkerCustomer):
     def __init__(self, source, target, paths, overwrite, *args, **kwargs):
         super(CopyLocal, self).__init__(*args, **kwargs)
 
@@ -17,9 +19,21 @@ class CopyLocal(BaseWorkerCustomer):
         self.paths = paths
         self.overwrite = overwrite
 
+        self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
+
+    def _prepare(self):
+        if os.path.islink(self.download_dir):
+            raise Exception('Symlinks are not allowed!')
+
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
     def run(self):
         try:
+            self._prepare()
             self.preload()
+            self.logger.info("CopyLocal process run %s", self.target)
+
             success_paths = []
             error_paths = []
 
@@ -52,88 +66,12 @@ class CopyLocal(BaseWorkerCustomer):
 
             for path in self.paths:
                 try:
-                    abs_path = self.get_abs_path(path)
-                    file_basename = os.path.basename(abs_path)
+                    inside = True
 
-                    if os.path.isdir(abs_path):
-                        destination = os.path.join(target_path, file_basename)
 
-                        if not os.path.exists(destination):
-                            st = os.stat(abs_path)
-                            os.makedirs(destination, stat.S_IMODE(st.st_mode))
-                        elif self.overwrite and os.path.exists(destination) and os.path.isdir(destination):
-                            shutil.copymode(abs_path, destination)
-                        elif self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-                            shutil.rmtree(destination)
-                            st = os.stat(abs_path)
-                            os.makedirs(destination, stat.S_IMODE(st.st_mode))
-                        elif not self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-                            raise Exception("destination is not a dir")
-                        else:
-                            pass
+                    self.ssh_manager.remote_copy(path, target_path, self.download_dir, rsync_inside=False, sync_inside=False, by_folder=True)
 
-                        operation_progress["processed"] += 1
-
-                        for current, dirs, files in os.walk(abs_path):
-                            relative_root = os.path.relpath(current, source_path)
-                            for d in dirs:
-                                source_dir = os.path.join(current, d)
-                                target_dir = os.path.join(target_path, relative_root, d)
-                                if not os.path.exists(target_dir):
-                                    st = os.stat(source_dir)
-                                    os.makedirs(target_dir, stat.S_IMODE(st.st_mode))
-                                elif self.overwrite and os.path.exists(target_dir) and os.path.isdir(target_dir):
-                                    shutil.copymode(source_dir, target_dir)
-                                elif self.overwrite and os.path.exists(target_dir) and not os.path.isdir(target_dir):
-                                    shutil.rmtree(target_dir)
-                                    st = os.stat(source_dir)
-                                    os.makedirs(target_dir, stat.S_IMODE(st.st_mode))
-                                elif not self.overwrite and os.path.exists(target_dir) and not os.path.isdir(
-                                        target_dir):
-                                    raise Exception("destination is not a dir")
-                                else:
-                                    pass
-                                operation_progress["processed"] += 1
-                            for f in files:
-                                source_file = os.path.join(current, f)
-                                target_file = os.path.join(target_path, relative_root, f)
-                                if not os.path.exists(target_file):
-                                    shutil.copy(source_file, target_file)
-                                elif self.overwrite and os.path.exists(target_file) and not os.path.isdir(target_file):
-                                    shutil.copy(source_file, target_file)
-                                elif self.overwrite and os.path.isdir(target_file):
-                                    """
-                                    See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                                    In case copy file when destination is dir
-                                    """
-                                    shutil.rmtree(target_file)
-                                    shutil.copy(source_file, target_file)
-                                else:
-                                    pass
-                                operation_progress["processed"] += 1
-                    elif os.path.isfile(abs_path):
-                        try:
-                            target_file = os.path.join(target_path, file_basename)
-                            if not os.path.exists(target_file):
-                                shutil.copy(abs_path, target_file)
-                            elif self.overwrite and os.path.exists(target_file) and not os.path.isdir(target_file):
-                                shutil.copy(abs_path, target_file)
-                            elif self.overwrite and os.path.isdir(target_file):
-                                """
-                                See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                                In case copy file when destination is dir
-                                """
-                                shutil.rmtree(target_file)
-                                shutil.copy(abs_path, target_file)
-                            else:
-                                pass
-                            operation_progress["processed"] += 1
-                        except Exception as e:
-                            self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))
-                            raise e
-                        finally:
-                            operation_progress["processed"] += 1
-
+                    operation_progress["processed"] += 1
                     success_paths.append(path)
 
                 except Exception as e:

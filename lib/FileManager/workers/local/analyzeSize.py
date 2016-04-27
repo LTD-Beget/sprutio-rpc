@@ -1,13 +1,12 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from misc.helpers import get_util
 from misc.helpers import SubprocessRunner
 import traceback
 import os
-import subprocess
 import re
 
 
-class AnalyzeSize(BaseWorkerCustomer):
+class AnalyzeSize(MainWorkerCustomer):
     def __init__(self, path, *args, **kwargs):
         super(AnalyzeSize, self).__init__(*args, **kwargs)
 
@@ -19,11 +18,11 @@ class AnalyzeSize(BaseWorkerCustomer):
             abs_path = self.get_abs_path(self.path)
             self.logger.debug("FM AnalyzeSize worker run(), abs_path = %s" % abs_path)
 
-            if not os.path.exists(abs_path):
+            if not self.ssh_manager.exists(abs_path):
                 raise Exception("Provided path not exist")
 
             result = []
-            filelist = os.listdir(abs_path)
+            filelist = self.ssh_manager.sftp.listdir(abs_path)
             self.logger.debug("filelist = %s" % filelist)
 
             self.on_running(self.status_id, pid=self.pid, pname=self.name)
@@ -33,19 +32,18 @@ class AnalyzeSize(BaseWorkerCustomer):
                 abs_filelist = []
                 for f in filelist:
                     abs_f = os.path.join(abs_path, f)
-                    abs_filelist.append(abs_f)
+                    abs_filelist.append("'{}'".format(abs_f))
 
                 du = get_util('du')
                 command = [du, "-B", "1", "-x", "-P", "-s"] + abs_filelist
                 du_regex = re.compile('^([0-9]+)\s+(.*)$', re.UNICODE | re.IGNORECASE)
 
-                p = SubprocessRunner(command=command, logger=self.logger, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
+                full_command = " ".join(command)
+                stdout = self.ssh_manager.conn.run(full_command).stdout
+                print("stdout", stdout)
 
-                for line in p.iterate():
+                for line in stdout.decode().split("\n"):
                     try:
-                        # self.logger.debug("test line = %s (%s)" % (pprint.pformat(line),
-                        # pprint.pformat(du_regex.match(line))))
                         match = du_regex.match(line)
 
                         if match is None:

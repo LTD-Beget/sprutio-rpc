@@ -1,19 +1,31 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FM import REQUEST_DELAY
+from config.main import TMP_DIR
+
 import os
 import traceback
 import shutil
 import time
 
 
-class CreateCopy(BaseWorkerCustomer):
+class CreateCopy(MainWorkerCustomer):
     def __init__(self, paths, *args, **kwargs):
         super(CreateCopy, self).__init__(*args, **kwargs)
 
         self.paths = paths
 
+        self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
+
+    def _prepare(self):
+        if os.path.islink(self.download_dir):
+            raise Exception('Symlinks are not allowed!')
+
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
     def run(self):
         try:
+            self._prepare()
             self.preload()
             self.logger.info("CreateCopy process run")
 
@@ -35,7 +47,7 @@ class CreateCopy(BaseWorkerCustomer):
             # Эта содомия нужна чтобы составтить массив source -> target для создания копии файла с красивым именем
             # с учетом того что могут быть совпадения
             for dirname, dir_paths in directories.items():
-                dir_listing = os.listdir(dirname)
+                dir_listing = self.ssh_manager.sftp.listdir(dirname)
 
                 for dir_path in dir_paths:
                     i = 0
@@ -65,7 +77,7 @@ class CreateCopy(BaseWorkerCustomer):
                     while exist:
                         exist = False
 
-                        if os.path.isdir(dir_path):
+                        if self.ssh_manager.isdir(dir_path):
                             filename = os.path.basename(dir_path)
                             ext = ''
                         else:
@@ -93,18 +105,36 @@ class CreateCopy(BaseWorkerCustomer):
 
             next_tick = time.time() + REQUEST_DELAY
 
+            files_for_del = []
+
             for copy_path in copy_paths:
                 try:
                     source_abs_path = copy_path.get('source')
                     target_abs_path = copy_path.get('target')
+                    print(source_abs_path, target_abs_path)
 
-                    if os.path.isfile(source_abs_path):
-                        shutil.copy(source_abs_path, target_abs_path)
-                    elif os.path.islink(source_abs_path):
-                        shutil.copy(source_abs_path, target_abs_path)
-                    elif os.path.isdir(source_abs_path):
-                        shutil.copytree(source_abs_path, target_abs_path, True)
+                    # загуржаем локально
+                    fname = os.path.basename(source_abs_path)
+                    temp_fpath = os.path.join(self.download_dir, self.random_hash(), fname)
+
+                    self.logger.info("Before: %s, %s, %s", source_abs_path, temp_fpath, os.path.dirname(temp_fpath))
+
+                    if self.ssh_manager.isfile(source_abs_path):
+                        os.makedirs(os.path.dirname(temp_fpath))
+
+                        self.ssh_manager.sftp.get(source_abs_path, temp_fpath)
+                        self.ssh_manager.sftp.put(temp_fpath, target_abs_path)
+
+                    elif self.ssh_manager.islink(source_abs_path):
+                        os.makedirs(os.path.dirname(temp_fpath))
+
+                        self.ssh_manager.sftp.get(source_abs_path, temp_fpath)
+                        self.ssh_manager.sftp.put(temp_fpath, target_abs_path)
+
+                    elif self.ssh_manager.isdir(source_abs_path):
+                        self.ssh_manager.remote_copy(source_abs_path, target_abs_path, self.download_dir, rsync_inside=False, by_folder=True)
                     else:
+                        self.logger.info("error", os.path.dirname(temp_fpath))
                         error_paths.append(source_abs_path)
                         break
 
@@ -122,8 +152,12 @@ class CreateCopy(BaseWorkerCustomer):
                         next_tick = time.time() + REQUEST_DELAY
 
                 except Exception as e:
-                    self.logger.error("Error copy file %s , error %s" % (str(source_abs_path), str(e)))
+                    self.logger.error("Error CreateCopy file %s , error %s" % (str(source_abs_path), str(e)))
                     error_paths.append(source_abs_path)
+                finally:
+                    for f in files_for_del:
+                        if os.path.exists(f):
+                            os.remove(f)
 
             result = {
                 "success": success_paths,

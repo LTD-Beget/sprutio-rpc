@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 import traceback
 import os
 
 
-class UploadFile(BaseWorkerCustomer):
+class UploadFile(MainWorkerCustomer):
     def __init__(self, path, file_path, overwrite, session, *args, **kwargs):
         super(UploadFile, self).__init__(*args, **kwargs)
 

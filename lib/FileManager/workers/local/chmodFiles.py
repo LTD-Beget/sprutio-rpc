@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FM import REQUEST_DELAY
 import traceback
 import threading
@@ -6,7 +6,7 @@ import time
 import os
 
 
-class ChmodFiles(BaseWorkerCustomer):
+class ChmodFiles(MainWorkerCustomer):
     def __init__(self, params, *args, **kwargs):
         super(ChmodFiles, self).__init__(*args, **kwargs)
 
@@ -54,44 +54,46 @@ class ChmodFiles(BaseWorkerCustomer):
 
                 try:
                     abs_path = self.get_abs_path(path)
-                    self.logger.debug("Changing attributes file %s , %s" % (str(abs_path), str(oct(mode))))
+                    #self.logger.debug("Changing attributes file %s , %s" % (str(abs_path), str(oct(mode))))
+                    self.logger.info("Changing attributes file %s , %s" % (str(abs_path), str(oct(mode))))
 
                     if recursive:
                         if recursive_dirs:
-                            os.chmod(abs_path, mode)
+                            self.ssh_manager.sftp.chmod(abs_path, mode)
                             operation_progress["processed"] += 1
 
-                        for current, dirs, files in os.walk(abs_path):
+                        for current, dirs, files in self.ssh_manager.walk(abs_path):
                             if recursive_dirs:
                                 for d in dirs:
                                     dir_path = os.path.join(current, d)
-                                    if os.path.islink(dir_path):
+                                    if self.ssh_manager.islink(dir_path):
                                         try:
-                                            os.chmod(dir_path, mode)
+                                            self.ssh_manager.sftp.chmod(dir_path, mode)
                                         except OSError:
                                             self.logger.info("Cannot change attributes on symlink dir %s , %s" % (
                                                 str(dir_path), str(oct(mode))))
                                             pass
                                     else:
-                                        os.chmod(dir_path, mode)
+                                        self.ssh_manager.sftp.chmod(dir_path, mode)
                                     operation_progress["processed"] += 1
 
                             if recursive_files:
                                 for f in files:
                                     file_path = os.path.join(current, f)
 
-                                    if os.path.islink(file_path):
+                                    if self.ssh_manager.islink(file_path):
                                         try:
-                                            os.chmod(file_path, mode)
+                                            self.ssh_manager.sftp.chmod(file_path, mode)
                                         except OSError:
                                             self.logger.info("Cannot change attributes on symlink file %s , %s" % (
                                                 str(file_path), str(oct(mode))))
                                             pass
                                     else:
-                                        os.chmod(file_path, mode)
+                                        self.ssh_manager.sftp.chmod(file_path, mode)
                                     operation_progress["processed"] += 1
                     else:
-                        os.chmod(abs_path, mode)
+                        self.logger.info("%s , %s" % (abs_path, mode))
+                        self.ssh_manager.sftp.chmod(abs_path, mode)
 
                     success_paths.append(path)
 

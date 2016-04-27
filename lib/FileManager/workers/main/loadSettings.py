@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
 from config.main import DB_FILE
 import sqlite3
 
 
-class LoadSettings(BaseWorkerCustomer):
+class LoadSettings(MainWorkerCustomer):
     def __init__(self, *args, **kwargs):
         super(LoadSettings, self).__init__(*args, **kwargs)
 
@@ -22,6 +22,7 @@ class LoadSettings(BaseWorkerCustomer):
             }
 
             self.on_success(result)
+            return result
 
         except Exception as e:
             result = {

@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from config.main import TMP_DIR
 import traceback
 import os
@@ -7,14 +7,23 @@ import shutil
 import subprocess
 
 
-class DownloadFiles(BaseWorkerCustomer):
+class DownloadFiles(MainWorkerCustomer):
     def __init__(self, paths, mode, *args, **kwargs):
         super(DownloadFiles, self).__init__(*args, **kwargs)
 
         self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
+        print(self.download_dir)
 
         self.paths = paths
         self.mode = mode
+
+        self.random_hash()
+        self.random_hash()
+        self.random_hash()
+        self.random_hash()
+        self.random_hash()
+
+        print(self.random_hash())
 
 
     def _prepare(self):
@@ -24,12 +33,6 @@ class DownloadFiles(BaseWorkerCustomer):
         if not os.path.exists(self.download_dir):
             os.makedirs(self.download_dir)
 
-        pw = self._get_login_pw()
-
-        os.lchown(os.path.dirname(self.download_dir), pw.pw_uid, pw.pw_gid)
-        os.lchown(self.download_dir, pw.pw_uid, pw.pw_gid)
-
-
     def run(self):
         try:
             # prepare download dir
@@ -37,7 +40,7 @@ class DownloadFiles(BaseWorkerCustomer):
 
             # drop privileges
             self.preload()
-            self.logger.info("DownloadFiles process run")
+            self.logger.info("DownloadFiles process run, %s" % self.paths)
 
             success_paths, error_paths = self.copy_files_to_tmp(self.download_dir)
 
@@ -128,6 +131,8 @@ class DownloadFiles(BaseWorkerCustomer):
                 inode = int(file_info.st_ino)
                 size = int(file_info.st_size)
 
+            print(download_path)
+
             result = {
                 "success": success_paths,
                 "errors": error_paths,
@@ -165,43 +170,11 @@ class DownloadFiles(BaseWorkerCustomer):
         error_paths = []
 
         for path in self.paths:
-            try:
-                abs_path = self.get_abs_path(path)
-                source_path = os.path.dirname(abs_path)
-                file_basename = os.path.basename(abs_path)
+            is_ok = self.ssh_manager.rsync(path, target_path)
 
-                if os.path.isdir(abs_path):
-                    destination = os.path.join(target_path, file_basename)
-
-                    if not os.path.exists(destination):
-                        st = os.stat(abs_path)
-                        os.makedirs(destination, stat.S_IMODE(st.st_mode))
-
-                    for current, dirs, files in os.walk(abs_path):
-                        relative_root = os.path.relpath(current, source_path)
-                        for d in dirs:
-                            source_dir = os.path.join(current, d)
-                            target_dir = os.path.join(target_path, relative_root, d)
-                            if not os.path.exists(target_dir):
-                                st = os.stat(source_dir)
-                                os.makedirs(target_dir, stat.S_IMODE(st.st_mode))
-                        for f in files:
-                            source_file = os.path.join(current, f)
-                            target_file = os.path.join(target_path, relative_root, f)
-                            shutil.copy(source_file, target_file)
-                elif os.path.isfile(abs_path):
-                    try:
-                        target_file = os.path.join(target_path, file_basename)
-                        shutil.copy(abs_path, target_file)
-                    except Exception as e:
-                        self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))
-                        raise e
-
+            if is_ok:
                 success_paths.append(path)
-
-            except Exception as e:
-                self.logger.error(
-                        "Error copy %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
+            else:
                 error_paths.append(path)
 
         return success_paths, error_paths

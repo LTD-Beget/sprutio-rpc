@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from config.main import DB_FILE
 import traceback
 import sqlite3
 
 
-class InitCallback(BaseWorkerCustomer):
+class InitCallback(MainWorkerCustomer):
     def __init__(self, *args, **kwargs):
         super(InitCallback, self).__init__(*args, **kwargs)
 
@@ -24,6 +24,7 @@ class InitCallback(BaseWorkerCustomer):
                 "traceback": None
             }
             self.on_success(result)
+            return result
 
         except Exception as e:
             result = {

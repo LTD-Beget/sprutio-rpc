@@ -1,12 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from config.main import TMP_DIR
 import traceback
 import os
-import shutil
-import stat
 
 
-class ReadImages(BaseWorkerCustomer):
+class ReadImages(MainWorkerCustomer):
     def __init__(self, paths, *args, **kwargs):
         super(ReadImages, self).__init__(*args, **kwargs)
 
@@ -18,8 +16,8 @@ class ReadImages(BaseWorkerCustomer):
             self.logger.info("Local ReadImages process run")
 
             hash_str = self.random_hash()
-            download_dir = TMP_DIR + '/images/' + self.login + '/' + hash_str + '/'
-            success_paths, error_paths = self.copy_files_to_tmp(download_dir)
+            self.download_dir = TMP_DIR + '/images/' + self.login + '/' + hash_str + '/'
+            success_paths, error_paths = self.copy_files_to_tmp()
 
             if len(success_paths) == 1:
                 one_file = True
@@ -58,57 +56,21 @@ class ReadImages(BaseWorkerCustomer):
 
             self.on_error(result)
 
-    def copy_files_to_tmp(self, target_path):
-        if not os.path.exists(target_path):
-            os.makedirs(target_path)
-
+    def copy_files_to_tmp(self):
         success_paths = []
         error_paths = []
 
         for path in self.paths:
             try:
                 abs_path = self.get_abs_path(path)
-                source_path = os.path.dirname(path)
                 file_basename = os.path.basename(abs_path)
 
-                if os.path.isdir(abs_path):
-                    destination = os.path.join(target_path, file_basename)
+                if self.ssh_manager.isdir(abs_path):
+                    self.ssh_manager.sync_new(path, self.download_dir, direction="rl", create_folder=True)
+                else:
+                    self.ssh_manager.sync_new(path, os.path.join(self.download_dir, file_basename), direction="rl")
 
-                    if not os.path.exists(destination):
-                        st = os.stat(abs_path)
-                        os.makedirs(destination, stat.S_IMODE(st.st_mode))
-                    else:
-                        raise Exception("destination already exist")
-
-                    for current, dirs, files in os.walk(abs_path):
-                        relative_root = os.path.relpath(current, source_path)
-                        for d in dirs:
-                            source_dir = os.path.join(current, d)
-                            target_dir = os.path.join(target_path, relative_root, d)
-                            if not os.path.exists(target_dir):
-                                st = os.stat(source_dir)
-                                os.makedirs(target_dir, stat.S_IMODE(st.st_mode))
-                            else:
-                                raise Exception("destination dir already exists")
-                        for f in files:
-                            source_file = os.path.join(current, f)
-                            target_file = os.path.join(target_path, relative_root, f)
-                            if not os.path.exists(target_file):
-                                shutil.copy(source_file, target_file)
-                            else:
-                                raise Exception("destination file already exists")
-                elif os.path.isfile(abs_path):
-                    try:
-                        target_file = os.path.join(target_path, file_basename)
-                        if not os.path.exists(target_file):
-                            shutil.copy(abs_path, target_file)
-                        else:
-                            raise Exception("destination file already exists")
-                    except Exception as e:
-                        self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))
-                        raise e
-
-                success_paths.append(path)
+                success_paths.append(os.path.join(self.download_dir, file_basename))
 
             except Exception as e:
                 self.logger.error(

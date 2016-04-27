@@ -498,7 +498,8 @@ class LocalController(Controller):
 
         process = process_object(**kwargs)
         process.start()
-        ready = select.select([parent_conn], [], [], timeout)  # timeout 30sec
+
+        ready = select.select([parent_conn], [], [], 30)  # timeout 30sec
         if ready[0]:
             result = parent_conn.recv()
             process.join()
@@ -514,12 +515,15 @@ class LocalController(Controller):
         return self.on_finish(process, result)
 
     def on_finish(self, process, data=None):
+        process.close_ssh_connection()
+
         self.logger.info("Process on_finish()")
         self.logger.info("Process exit code %s info = %s" % (str(process.exitcode), pprint.pformat(process)))
 
-        if process.exitcode < 0:
+        if process.exitcode is None:
+            raise Exception("Process finish with errors, by timeout")
+        elif process.exitcode < 0:
             raise Exception("Process aborted with exitcode = %s" % str(process.exitcode))
-
         elif process.exitcode > 0:
             raise Exception("Process finish with errors, exitcode = %s" % str(process.exitcode))
 

@@ -63,7 +63,7 @@ class Handler(asynchat.async_chat):
 
     def close(self):
         print("Handler close()")
-        asynchat.async_chat.close(self)
+        #asynchat.async_chat.close(self)
         self.closed = True
 
     def handle_error(self):
@@ -92,7 +92,7 @@ class NoMemoryHandler(Handler):
 
 class FileStreamHandler(Handler):
     # same as above but doesn't store received data in memory
-    ac_in_buffer_size = 65536
+    ac_in_buffer_size = 65000
     ac_meta_length = 2
 
     def __init__(self, conn):
@@ -103,20 +103,38 @@ class FileStreamHandler(Handler):
         """:type: io.BufferedWriter"""
 
     def handle_read(self):
+        print("")
         print("FileStreamHandler handle_read()")
         if self.fd is None:
+            print("FileStreamHandler  handle_read() self.fd is None")
             header_len_bytes = self.recv(2)
             header_len = int.from_bytes(header_len_bytes, byteorder='big')
             file_path_bytes = self.recv(header_len)
             file_path = file_path_bytes.decode("utf-8")
+            self.file_path = file_path
             self.open_file(file_path)
+        else:
+            print("FileStreamHandler handle_read() self.fd exists")
 
         data = self.recv(self.ac_in_buffer_size)
-        self.fd.write(data)
-        print("FileStreamHandler handle_read() done")
+        print("FileStreamHandler handle_read() len(data)", len(data))
+        if not data:
+            self.push(b("220 ready\r\n"))
 
         if self.closed:
             self.close_file()
+            #asynchat.async_chat.close(self)
+            #self.push(b("closed()"))
+            self.push(b("220 ready\r\n"))
+            asynchat.async_chat.close(self)
+        else:
+            self.in_buffer_len += len(data)
+            print("FileStreamHandler handle_read() recv =", len(data), self.in_buffer_len)
+            self.fd.write(data)
+            print("FileStreamHandler handle_read() done")
+
+        #if self.closed:
+        #    self.close_file()
 
     def open_file(self, path):
         print("FileStreamHandler open_file(), path = %s" % (path,))
@@ -128,18 +146,37 @@ class FileStreamHandler(Handler):
         print("FileStreamHandler close_file()")
         self.fd.close()
 
+        #with open(self.file_path) as f:
+        #    import os
+        #    import datetime
+        #    print(datetime.datetime.now())
+        #    print(os.stat(self.file_path))
+
     def handle_close(self):
         print("FileStreamHandler handle_close()")
         self.close()
 
+    def readable(self):
+        print("FileStreamHandler readable()", not self.closed)
+        return not self.closed
 
-class Server(asyncore.dispatcher, threading.Thread):
-    handler = Handler
+    #def close(self):
+    #    print("FileStreamHandler close()")
+    #
+    #    data = self.recv(self.ac_in_buffer_size)
+    #    print("FileStreamHandler close() recv =", len(data))
+    #    asynchat.async_chat.close(self)
+    #    self.closed = True
+
+
+class Server(asyncore.dispatcher): #, threading.Thread):
+    handler = FileStreamHandler
 
     def __init__(self, address):
-        threading.Thread.__init__(self)
+        #threading.Thread.__init__(self)
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.set_reuse_addr()
         self.bind(address)
         self.listen(5)
         self.host, self.port = self.socket.getsockname()[:2]
@@ -183,15 +220,22 @@ class Server(asyncore.dispatcher, threading.Thread):
         asyncore.close_all()
 
     def handle_accept(self):
+        print("[Server] handle_accept()")
         conn, addr = self.accept()
         self.handler_instance = self.handler(conn)
 
     def handle_connect(self):
+        print("[Server] handle_connect()")
         self.close()
 
-    handle_read = handle_connect
+    def handle_read(self):
+        print("[Server] handle_read()")
+        self.close()
+
+    #handle_read = handle_connect
 
     def writable(self):
+        print("[Server] writable()")
         return 0
 
     def handle_error(self):
@@ -211,15 +255,16 @@ if __name__ == "__main__":
         print("LOGFILE: %s" % os.path.realpath(RPC_SENDFILE_DEFAULT_LOGFILE))
         print("Starting server")
         server = Server((RPC_SENDFILE_HOST, RPC_SENDFILE_PORT))
-        server.handler = FileStreamHandler
-        listen_kwargs = {
-            "host": server.host,
-            "port": server.port,
-            "logger_name": RPC_SENDFILE_PROGRAM_NAME,
-        }
-
-        server.start()
-        print("LISTEN %s" % listen_kwargs)
+        #server.handler = FileStreamHandler
+        #listen_kwargs = {
+        #    "host": server.host,
+        #    "port": server.port,
+        #    "logger_name": RPC_SENDFILE_PROGRAM_NAME,
+        #}
+        #
+        #server.start()
+        asyncore.loop()
+        #print("LISTEN %s" % listen_kwargs)
 
         sys.stdout.write("\nstarting transfer:\n")
         sys.stdout.flush()

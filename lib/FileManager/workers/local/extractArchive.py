@@ -1,6 +1,9 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FM import REQUEST_DELAY
 from lib.FileManager.SevenZFile import SevenZFile
+from config.main import TMP_DIR
+
+import shutil
 import traceback
 import os
 import time
@@ -14,7 +17,7 @@ import pyinotify
 import gzip
 
 
-class ExtractArchive(BaseWorkerCustomer):
+class ExtractArchive(MainWorkerCustomer):
     def __init__(self, params, *args, **kwargs):
         super(ExtractArchive, self).__init__(*args, **kwargs)
 
@@ -29,41 +32,59 @@ class ExtractArchive(BaseWorkerCustomer):
             "done": False
         }
 
+        self.folder_for_archive = os.path.join(TMP_DIR, self.login, self.random_hash())
+        self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
+
+    def _prepare(self, path):
+        if os.path.islink(path):
+            raise Exception('Symlinks are not allowed!')
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
     def run(self):
         try:
+            self._prepare(self.folder_for_archive)
+            self._prepare(self.download_dir)
             self.preload()
+
+            # copy archive to local fs
+            source_archive_filename = os.path.basename(self.file.get("path"))
+            synced_archive_filename = os.path.join(self.folder_for_archive, source_archive_filename)
+            self.ssh_manager.sync_new(self.file.get("path"), synced_archive_filename, direction="rl")
+
             abs_extract_path = self.get_abs_path(self.extract_path)
 
-            if not os.path.exists(abs_extract_path):
+            if not self.ssh_manager.exists(abs_extract_path):
                 try:
-                    os.makedirs(abs_extract_path)
+                    self.ssh_manager.makedirs(abs_extract_path)
                 except Exception as e:
                     self.logger.error("Cannot create extract path %s. %s" % (str(e), traceback.format_exc()))
                     raise Exception("Cannot create extract path")
-            elif os.path.isfile(abs_extract_path):
+            elif self.ssh_manager.isfile(abs_extract_path):
                 raise Exception("Extract path incorrect - file exists")
 
             abs_archive_path = self.get_abs_path(self.file.get("path"))
 
-            if not os.path.exists(abs_archive_path):
+            if not os.path.exists(synced_archive_filename):
                 raise Exception("Archive file is not exist")
 
             self.on_running(self.status_id, pid=self.pid, pname=self.name)
             self.logger.debug("Start extracting %s", abs_archive_path)
 
             # for rar and zip same algorithm
-            if is_zipfile(abs_archive_path) or rarfile.is_rarfile(abs_archive_path) or SevenZFile.is_7zfile(
-                    abs_archive_path):
+            if is_zipfile(synced_archive_filename) or rarfile.is_rarfile(synced_archive_filename) or SevenZFile.is_7zfile(
+                    synced_archive_filename):
 
-                if is_zipfile(abs_archive_path):
+                if is_zipfile(synced_archive_filename):
                     self.logger.info("Archive ZIP type, using zipfile (beget)")
-                    a = ZipFile(abs_archive_path)
-                elif rarfile.is_rarfile(abs_archive_path):
+                    a = ZipFile(synced_archive_filename)
+                elif rarfile.is_rarfile(synced_archive_filename):
                     self.logger.info("Archive RAR type, using rarfile")
-                    a = rarfile.RarFile(abs_archive_path)
+                    a = rarfile.RarFile(synced_archive_filename)
                 else:
                     self.logger.info("Archive 7Zip type, using py7zlib")
-                    a = SevenZFile(abs_archive_path)
+                    a = SevenZFile(synced_archive_filename)
 
                     # extract Empty Files first
                     for fileinfo in a.archive.header.files.files:
@@ -78,7 +99,7 @@ class ExtractArchive(BaseWorkerCustomer):
 
                         unicode_name = unicode_name.replace('\\', '/')  # For windows name in rar etc.
 
-                        file_name = os.path.join(abs_extract_path, unicode_name)
+                        file_name = os.path.join(self.download_dir, unicode_name)
                         dir_name = os.path.dirname(file_name)
 
                         if not os.path.exists(dir_name):
@@ -98,7 +119,7 @@ class ExtractArchive(BaseWorkerCustomer):
 
                 # checking ascii names
                 try:
-                    abs_extract_path.encode('utf-8').decode('ascii')
+                    self.download_dir.encode('utf-8').decode('ascii')
                     for name in a.namelist():
                         name.encode('utf-8').decode('ascii')
                 except UnicodeDecodeError:
@@ -120,7 +141,7 @@ class ExtractArchive(BaseWorkerCustomer):
 
                             unicode_name = unicode_name.replace('\\', '/')  # For windows name in rar etc.
 
-                            file_name = os.path.join(abs_extract_path, unicode_name)
+                            file_name = os.path.join(self.download_dir, unicode_name)
                             dir_name = os.path.dirname(file_name)
 
                             if not os.path.exists(dir_name):
@@ -143,8 +164,8 @@ class ExtractArchive(BaseWorkerCustomer):
 
                     else:
                         self.logger.info("EXTRACT ALL to %s , encoded = %s" % (
-                            pprint.pformat(abs_extract_path), pprint.pformat(abs_extract_path)))
-                        a.extractall(abs_extract_path)  # Not working with non-ascii windows folders
+                            pprint.pformat(self.download_dir), pprint.pformat(self.download_dir)))
+                        a.extractall(self.download_dir)  # Not working with non-ascii windows folders
                 except Exception as e:
                     self.logger.error("Error extract path %s. %s" % (str(e), traceback.format_exc()))
                     raise e
@@ -152,20 +173,20 @@ class ExtractArchive(BaseWorkerCustomer):
                     self.extracted_files["done"] = True
                     t.join()
 
-            elif libarchive.is_archive(abs_archive_path):
+            elif libarchive.is_archive(synced_archive_filename):
                 self.logger.info("Archive other type, using libarchive")
 
                 next_tick = time.time() + REQUEST_DELAY
                 print(pprint.pformat("Clock = %s ,  tick = %s" % (str(time.time()), str(next_tick))))
 
                 infolist = []
-                with libarchive.Archive(abs_archive_path, entry_class=Entry) as a:
+                with libarchive.Archive(synced_archive_filename, entry_class=Entry) as a:
                     for entry in a:
                         infolist.append(entry)
 
-                with libarchive.Archive(abs_archive_path, entry_class=Entry) as a:
+                with libarchive.Archive(synced_archive_filename, entry_class=Entry) as a:
                     for entry in a:
-                        entry_path = os.path.join(abs_extract_path, entry.pathname)
+                        entry_path = os.path.join(self.download_dir, entry.pathname)
                         self.logger.debug("Entry pathname %s - %s", entry.pathname, entry.size)
 
                         if time.time() > next_tick:
@@ -196,12 +217,12 @@ class ExtractArchive(BaseWorkerCustomer):
                 self.logger.info("gz file type, using gzip")
                 try:
                     # if its just a gz file
-                    a = gzip.open(abs_archive_path)
+                    a = gzip.open(synced_archive_filename)
                     file_content = a.read()
                     a.close()
 
-                    file_name = os.path.splitext(os.path.basename(abs_archive_path))[0]
-                    file_path = os.path.join(abs_extract_path, file_name)
+                    file_name = os.path.splitext(os.path.basename(synced_archive_filename))[0]
+                    file_path = os.path.join(self.download_dir, file_name)
                     infolist = [file_name]
                     dir_name = os.path.dirname(file_path)
 
@@ -217,6 +238,8 @@ class ExtractArchive(BaseWorkerCustomer):
                     self.extracted_files["done"] = True
             else:
                 raise Exception("Archive file has unkown format")
+
+            self.ssh_manager.sync_new(self.download_dir, abs_extract_path, direction="lr")
 
             progress = {
                 'percent': round(float(self.extracted_files["count"]) / float(len(infolist)), 2),
@@ -236,6 +259,13 @@ class ExtractArchive(BaseWorkerCustomer):
             }
 
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
+
+        finally:
+            if os.path.exists(self.download_dir):
+                shutil.rmtree(self.download_dir)
+
+            if os.path.exists(self.folder_for_archive):
+                shutil.rmtree(self.folder_for_archive)
 
     def progress(self, infolist, progress, extract_path):
         self.logger.debug("extract thread progress() start")

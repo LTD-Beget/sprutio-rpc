@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
 import os
 import shutil
 
 
-class UploadFile(BaseWorkerCustomer):
+class UploadFile(MainWorkerCustomer):
     def __init__(self, path, file_path, overwrite, *args, **kwargs):
         super(UploadFile, self).__init__(*args, **kwargs)
 
@@ -29,11 +29,10 @@ class UploadFile(BaseWorkerCustomer):
         else:
             os.lchown(self.file_path, pw.pw_uid, pw.pw_gid)
 
-
     def run(self):
         try:
             # prepare source files before moving to target dir
-            self._prepare()
+            #self._prepare()
 
             # drop privileges
             self.preload()
@@ -42,17 +41,21 @@ class UploadFile(BaseWorkerCustomer):
             target_file = os.path.join(self.path, os.path.basename(self.file_path))
             abs_target = self.get_abs_path(target_file)
 
-            if not os.path.exists(abs_target):
-                shutil.move(self.file_path, abs_target)
-            elif self.overwrite and os.path.exists(abs_target) and not os.path.isdir(abs_target):
-                shutil.move(self.file_path, abs_target)
-            elif self.overwrite and os.path.isdir(abs_target):
+            def putfile():
+                self.ssh_manager.sftp.put(self.file_path, abs_target)
+                os.remove(self.file_path)
+
+            if not self.ssh_manager.exists(abs_target):
+                putfile()
+            elif self.overwrite and self.ssh_manager.exists(abs_target) and not self.ssh_manager.isdir(abs_target):
+                putfile()
+            elif self.overwrite and self.ssh_manager.isdir(abs_target):
                 """
                 See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
                 In case copy file when destination is dir
                 """
-                shutil.rmtree(abs_target)
-                shutil.move(self.file_path, abs_target)
+                self.ssh_manager.rmtree(abs_target)
+                putfile()
             else:
                 pass
 

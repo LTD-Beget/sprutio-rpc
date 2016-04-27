@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FM import REQUEST_DELAY
 import os
 import traceback
@@ -8,7 +8,7 @@ import time
 import stat
 
 
-class MoveLocal(BaseWorkerCustomer):
+class MoveLocal(MainWorkerCustomer):
     def __init__(self, source, target, paths, overwrite, *args, **kwargs):
         super(MoveLocal, self).__init__(*args, **kwargs)
 
@@ -32,6 +32,7 @@ class MoveLocal(BaseWorkerCustomer):
 
             source_path = self.source.get('path')
             target_path = self.target.get('path')
+            print(source_path, target_path, self.paths)
 
             if source_path is None:
                 raise Exception("Source path empty")
@@ -58,89 +59,14 @@ class MoveLocal(BaseWorkerCustomer):
                     abs_path = self.get_abs_path(path)
                     file_basename = os.path.basename(abs_path)
 
-                    if os.path.isdir(abs_path):
-                        destination = os.path.join(target_path, file_basename)
+                    if self.ssh_manager.isdir(abs_path):
+                        self.ssh_manager.remote_copy_new(abs_path, target_path, create_folder=True)
+                        self.ssh_manager.rmtree(abs_path)
+                    elif self.ssh_manager.isfile(abs_path):
+                        self.ssh_manager.remote_copy_new(abs_path, os.path.join(target_path, file_basename))
+                        self.ssh_manager.sftp.remove(abs_path)
 
-                        if not os.path.exists(destination):
-                            st = os.stat(abs_path)
-                            os.makedirs(destination, stat.S_IMODE(st.st_mode))
-                        elif self.overwrite and os.path.exists(destination) and os.path.isdir(destination):
-                            shutil.copymode(abs_path, destination)
-                        elif self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-                            shutil.rmtree(destination)
-                            st = os.stat(abs_path)
-                            os.makedirs(destination, stat.S_IMODE(st.st_mode))
-                        elif not self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-                            raise Exception("destination is not a dir")
-                        else:
-                            pass
-
-                        for current, dirs, files in os.walk(abs_path, topdown=False):
-                            relative_root = os.path.relpath(current, source_path)
-                            target_current_dir = os.path.join(target_path, relative_root)
-
-                            if not os.path.exists(target_current_dir):
-                                st = os.stat(current)
-                                os.makedirs(target_current_dir, stat.S_IMODE(st.st_mode))
-                            elif self.overwrite and os.path.exists(target_current_dir) and os.path.isdir(
-                                    target_current_dir):
-                                shutil.copymode(current, target_current_dir)
-                            elif self.overwrite and os.path.exists(target_current_dir) and not os.path.isdir(
-                                    target_current_dir):
-                                shutil.rmtree(target_current_dir)
-                                st = os.stat(current)
-                                os.makedirs(target_current_dir, stat.S_IMODE(st.st_mode))
-                            elif not self.overwrite and os.path.exists(target_current_dir) and not os.path.isdir(
-                                    target_current_dir):
-                                raise Exception("destination is not a dir")
-                            else:
-                                pass
-
-                            for f in files:
-                                source_file = os.path.join(current, f)
-                                target_file = os.path.join(target_path, relative_root, f)
-                                if not os.path.exists(target_file):
-                                    shutil.move(source_file, target_file)
-                                elif self.overwrite and os.path.exists(target_file) and not os.path.isdir(target_file):
-                                    shutil.move(source_file, target_file)
-                                elif self.overwrite and os.path.isdir(target_file):
-                                    """
-                                    See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                                    In case copy file when destination is dir
-                                    """
-                                    shutil.rmtree(target_file)
-                                    shutil.move(source_file, target_file)
-                                else:
-                                    pass
-
-                                operation_progress["processed"] += 1
-
-                            operation_progress["processed"] += 1
-                            shutil.rmtree(current)
-
-                    elif os.path.isfile(abs_path):
-                        try:
-                            target_file = os.path.join(target_path, file_basename)
-                            if not os.path.exists(target_file):
-                                shutil.move(abs_path, target_file)
-                            elif self.overwrite and os.path.exists(target_file) and not os.path.isdir(target_file):
-                                shutil.move(abs_path, target_file)
-                            elif self.overwrite and os.path.isdir(target_file):
-                                """
-                                See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                                In case copy file when destination is dir
-                                """
-                                shutil.rmtree(target_file)
-                                shutil.move(abs_path, target_file)
-                            else:
-                                pass
-                            operation_progress["processed"] += 1
-                        except Exception as e:
-                            self.logger.info("Cannot move file %s , %s" % (abs_path, str(e)))
-                            raise e
-                        finally:
-                            operation_progress["processed"] += 1
-
+                    operation_progress["processed"] += 1
                     success_paths.append(path)
 
                 except Exception as e:

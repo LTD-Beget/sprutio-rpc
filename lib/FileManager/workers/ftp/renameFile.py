@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 import traceback
 import os
 
 
-class RenameFile(BaseWorkerCustomer):
+class RenameFile(MainWorkerCustomer):
 
     def __init__(self, source_path, target_path, session, *args, **kwargs):
         super(RenameFile, self).__init__(*args, **kwargs)

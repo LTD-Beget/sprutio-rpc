@@ -1,9 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
-import os
 
 
-class RenameFile(BaseWorkerCustomer):
+class RenameFile(MainWorkerCustomer):
 
     def __init__(self, source_path, target_path, *args, **kwargs):
         super(RenameFile, self).__init__(*args, **kwargs)
@@ -22,15 +21,10 @@ class RenameFile(BaseWorkerCustomer):
             self.logger.debug("FM NewFile worker run(), target_abs_path = %s" % target_abs_path)
 
             try:
-                if not os.path.exists(source_abs_path):
-                    raise OSError("Source file path not exists")
-
-                if os.path.exists(target_abs_path):
-                    raise OSError("Target file path already exists")
-
                 source = self._make_file_info(source_abs_path)
 
-                os.rename(source_abs_path, target_abs_path)
+                sftp = self.conn.open_sftp()
+                sftp.rename(source_abs_path, target_abs_path)
                 target = self._make_file_info(target_abs_path)
 
                 result = {

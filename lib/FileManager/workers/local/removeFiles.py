@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FM import REQUEST_DELAY
 import traceback
 import shutil
@@ -6,7 +6,7 @@ import time
 import os
 
 
-class RemoveFiles(BaseWorkerCustomer):
+class RemoveFiles(MainWorkerCustomer):
     def __init__(self, paths, *args, **kwargs):
         super(RemoveFiles, self).__init__(*args, **kwargs)
 
@@ -24,12 +24,12 @@ class RemoveFiles(BaseWorkerCustomer):
                 try:
                     abs_path = self.get_abs_path(path)
 
-                    if os.path.isfile(abs_path):
-                        os.remove(abs_path)
-                    elif os.path.islink(abs_path):
-                        os.unlink(abs_path)
-                    elif os.path.isdir(abs_path):
-                        shutil.rmtree(abs_path)
+                    if self.ssh_manager.isfile(abs_path):
+                        self.ssh_manager.sftp.remove(abs_path)
+                    elif self.ssh_manager.islink(abs_path):
+                        self.ssh_manager.sftp.unlink(abs_path)
+                    elif self.ssh_manager.isdir(abs_path):
+                        self.ssh_manager.rmtree(abs_path)
                     else:
                         error_paths.append(abs_path)
                         break

@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
 import os
 import threading
 
 
-class ListFiles(BaseWorkerCustomer):
+class ListFiles(MainWorkerCustomer):
     def __init__(self, path, *args, **kwargs):
         super(ListFiles, self).__init__(*args, **kwargs)
 
@@ -13,25 +13,30 @@ class ListFiles(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            abs_path = self.get_abs_path(self.path)
-            self.logger.debug("FM ListFiles worker run(), abs_path = %s" % abs_path)
+            #abs_path = self.get_abs_path(self.path)
+            self.logger.debug("FM ListFiles worker run(), abs_path = %s" % self.path)
 
-            items = []
-            self.__list_recursive(abs_path, items, 1)
-            info = self._make_file_info(abs_path)
+            #items = []
+            #self.__list_recursive(abs_path, items, 1)
+            #info = self._make_file_info(abs_path)
+            #path = self.path if self.path is not None else self.get_home_dir()
+            info = self.ssh_manager.list(path=self.path)
+
             result = {
                 "data": {
-                    'path': self.path,
-                    'is_share': info['is_share'],
-                    'is_share_write': info['is_share_write'],
-                    'items': items
+                    #'path': self.path,
+                    'is_share': False,#info['is_share'],
+                    'is_share_write': False,#info['is_share_write'],
+                    #'items': items
                 },
                 "error": False,
                 "message": None,
                 "traceback": None
             }
+            result["data"].update(info)
 
             self.on_success(result)
+            return result
 
         except Exception as e:
             result = {

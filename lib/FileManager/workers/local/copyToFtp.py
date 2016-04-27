@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
 import os
@@ -6,8 +6,10 @@ import traceback
 import threading
 import time
 
+from config.main import TMP_DIR
 
-class CopyToFtp(BaseWorkerCustomer):
+
+class CopyToFtp(MainWorkerCustomer):
     def __init__(self, source, target, paths, overwrite, *args, **kwargs):
         super(CopyToFtp, self).__init__(*args, **kwargs)
 
@@ -16,9 +18,12 @@ class CopyToFtp(BaseWorkerCustomer):
         self.paths = paths
         self.overwrite = overwrite
 
+        self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
+
     def run(self):
         try:
             self.preload()
+
             success_paths = []
             error_paths = []
 
@@ -54,8 +59,17 @@ class CopyToFtp(BaseWorkerCustomer):
                     abs_path = self.get_abs_path(path)
                     file_basename = os.path.basename(abs_path)
 
-                    if os.path.isdir(abs_path):
+                    if self.ssh_manager.isdir(path):
+                        self.ssh_manager.sync_new(path, self.download_dir, direction="rl", create_folder=True)
+                    else:
+                        self.ssh_manager.sync_new(path, os.path.join(self.download_dir, file_basename), direction="rl")
+
+                    synced_source_path = os.path.join(self.download_dir, file_basename)
+                    print("SYNCED_SOURCE_PATH: ", synced_source_path)
+
+                    if os.path.isdir(synced_source_path):
                         destination = ftp.path.join(target_path, file_basename)
+                        print("ITS DIR", destination)
 
                         if not ftp.exists(destination):
                             ftp.mkdir(destination)
@@ -67,12 +81,18 @@ class CopyToFtp(BaseWorkerCustomer):
                         else:
                             pass
 
+                        print("FTP directory created")
+
                         operation_progress["processed"] += 1
 
-                        for current, dirs, files in os.walk(abs_path):
-                            relative_root = os.path.relpath(current, source_path)
+                        for current, dirs, files in os.walk(synced_source_path):
+                            #relative_root = os.path.relpath(current, source_path)
+                            relative_root = os.path.relpath(current, self.download_dir)
+                            print("FTP relative_root", relative_root)
+
                             for d in dirs:
                                 target_dir = ftp.path.join(target_path, relative_root, d)
+                                print("FTP target_dir", target_dir)
                                 if not ftp.exists(target_dir):
                                     ftp.mkdir(target_dir)
                                 elif self.overwrite and ftp.exists(target_dir) and not ftp.isdir(target_dir):
@@ -84,6 +104,7 @@ class CopyToFtp(BaseWorkerCustomer):
                                 else:
                                     pass
                                 operation_progress["processed"] += 1
+
                             for f in files:
                                 source_file = os.path.join(current, f)
                                 target_file_path = ftp.path.join(target_path, relative_root)
@@ -114,16 +135,17 @@ class CopyToFtp(BaseWorkerCustomer):
                                 else:
                                     pass
                                 operation_progress["processed"] += 1
-                    elif os.path.isfile(abs_path):
+
+                    elif os.path.isfile(synced_source_path):
                         try:
                             target_file = ftp.path.join(target_path, file_basename)
                             if not ftp.exists(target_file):
-                                upload_result = ftp.upload(abs_path, target_path)
+                                upload_result = ftp.upload(synced_source_path, target_path)
                                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
                                     raise upload_result['error'] if upload_result['error'] is not None else Exception(
                                         "Upload error")
                             elif self.overwrite and ftp.exists(target_file) and not ftp.isdir(target_file):
-                                upload_result = ftp.upload(abs_path, target_path)
+                                upload_result = ftp.upload(synced_source_path, target_path)
                                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
                                     raise upload_result['error'] if upload_result['error'] is not None else Exception(
                                         "Upload error")
@@ -133,7 +155,7 @@ class CopyToFtp(BaseWorkerCustomer):
                                 In case copy file when destination is dir
                                 """
                                 ftp.remove(target_file)
-                                upload_result = ftp.upload(abs_path, target_path)
+                                upload_result = ftp.upload(synced_source_path, target_path)
                                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
                                     raise upload_result['error'] if upload_result['error'] is not None else Exception(
                                         "Upload error")

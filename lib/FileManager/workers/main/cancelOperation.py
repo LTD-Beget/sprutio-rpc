@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from misc.helpers import kill
 import traceback
 import signal
@@ -7,7 +7,7 @@ import pprint
 import pam
 
 
-class CancelOperation(BaseWorkerCustomer):
+class CancelOperation(MainWorkerCustomer):
     def __init__(self, pid, pname, *args, **kwargs):
         super(CancelOperation, self).__init__(*args, **kwargs)
 

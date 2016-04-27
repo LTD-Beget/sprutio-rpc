@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
 from config.main import DB_FILE
 import sqlite3
 
 
-class SaveSettings(BaseWorkerCustomer):
+class SaveSettings(MainWorkerCustomer):
     def __init__(self, params, *args, **kwargs):
         super(SaveSettings, self).__init__(*args, **kwargs)
 

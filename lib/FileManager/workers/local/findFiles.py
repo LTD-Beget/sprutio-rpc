@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
 import os
 import fnmatch
 
 
-class FindFiles(BaseWorkerCustomer):
+class FindFiles(MainWorkerCustomer):
     def __init__(self, params, *args, **kwargs):
         super(FindFiles, self).__init__(*args, **kwargs)
 
@@ -25,12 +25,12 @@ class FindFiles(BaseWorkerCustomer):
             abs_path = self.get_abs_path(self.path)
             self.logger.debug("FM FindFiles worker run(), abs_path = %s" % abs_path)
 
-            if not os.path.exists(abs_path):
+            if not self.ssh_manager.exists(abs_path):
                 raise Exception("Provided path not exist")
 
             self.on_running(self.status_id, pid=self.pid, pname=self.name)
 
-            for current, dirs, files in os.walk(abs_path):
+            for current, dirs, files in self.ssh_manager.walk(abs_path):
                 for f in files:
                     try:
                         if fnmatch.fnmatch(f, self.filename) and self.type_file:

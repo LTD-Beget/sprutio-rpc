@@ -1,4 +1,5 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
+from lib.FileManager.SSHConnection import SSHConnectionManager
 from lib.FileManager.FM import REQUEST_DELAY
 from binaryornot.check import is_binary
 from misc.helperUnicode import as_unicode
@@ -14,10 +15,10 @@ import mimetypes
 from multiprocessing import Process, JoinableQueue, Queue
 import time
 
-TIMEOUT_LIMIT = 3600
+TIMEOUT_LIMIT = 10 * 60 #3600 # 10 min
 
 
-class FindText(BaseWorkerCustomer):
+class FindText(MainWorkerCustomer):
     NUM_WORKING_PROCESSES = 2
 
     def __init__(self, params, *args, **kwargs):
@@ -54,20 +55,22 @@ class FindText(BaseWorkerCustomer):
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
             return
 
-        def worker(re_text, file_queue, result_queue, logger, timeout):
+        def worker(re_text, file_queue, result_queue, logger, timeout, w_number, ssh_manager):
             while int(time.time()) < timeout:
-                if file_queue.empty() is not True:
+                if not file_queue.empty():
                     f_path = file_queue.get()
+                    print("worker f_path:", f_path, w_number)
                     try:
-                        if not is_binary(f_path):
+                        if not ssh_manager.isbinary(f_path):
                             mime = mimetypes.guess_type(f_path)[0]
 
                             # исключаем некоторые mime типы из поиска
-                            if mime not in ['application/pdf', 'application/rar']:
-                                with open(f_path, 'rb') as fp:
+                            if mime not in ('application/pdf', 'application/rar'):
+                                with ssh_manager.sftp.open(f_path, 'rb') as fp:
                                     for line in fp:
                                         try:
                                             line = as_unicode(line)
+                                            print("worker line", line)
                                         except UnicodeDecodeError:
                                             charset = chardet.detect(line)
                                             if charset.get('encoding') in ['MacCyrillic']:
@@ -99,15 +102,25 @@ class FindText(BaseWorkerCustomer):
                     finally:
                         file_queue.task_done()
                 else:
+                    print("worker sleep: time.sleep(REQUEST_DELAY)", w_number)
                     time.sleep(REQUEST_DELAY)
 
         try:
             self.logger.debug("findText started with timeout = %s" % TIMEOUT_LIMIT)
             time_limit = int(time.time()) + TIMEOUT_LIMIT
             # Launches a number of worker threads to perform operations using the queue of inputs
+            params = self.params
+            ssh_managers = []
             for i in range(self.NUM_WORKING_PROCESSES):
+                #ssh_manager = SSHConnectionManager(self.USER_SERVER, self.login, self.password)
+                ssh_manager = SSHConnectionManager(
+                    server=params['ssh_server'], login=params['ssh_login'], password=None, pkey=params['ssh_key'],
+                    port=int(params['ssh_port'])
+                )
+                ssh_managers.append(ssh_manager)
+
                 p = Process(target=worker,
-                            args=(self.re_text, self.file_queue, self.result_queue, self.logger, time_limit))
+                            args=(self.re_text, self.file_queue, self.result_queue, self.logger, time_limit, i, ssh_manager))
                 p.start()
                 proc = psutil.Process(p.pid)
                 proc.ionice(psutil.IOPRIO_CLASS_IDLE)
@@ -120,14 +133,15 @@ class FindText(BaseWorkerCustomer):
             abs_path = self.get_abs_path(self.path)
             self.logger.debug("FM FindText worker run(), abs_path = %s" % abs_path)
 
-            if not os.path.exists(abs_path):
+            if not self.ssh_manager.exists(abs_path):
                 raise Exception("Provided path not exist")
 
             self.on_running(self.status_id, pid=self.pid, pname=self.name)
-            for current, dirs, files in os.walk(abs_path):
+            for current, dirs, files in self.ssh_manager.walk(abs_path):
                 for f in files:
                     try:
                         file_path = os.path.join(current, f)
+                        self.logger.error("put into queue: file_path = %s", file_path)
                         self.file_queue.put(file_path)
 
                     except UnicodeDecodeError as e:
@@ -153,6 +167,9 @@ class FindText(BaseWorkerCustomer):
 
             if int(time.time()) > time_limit:
                 self.is_alive['status'] = False
+
+            for ssh_m in ssh_managers:
+                ssh_m.conn.close()
 
             for p in self.processes:
                 try:

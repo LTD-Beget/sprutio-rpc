@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from config.main import TMP_DIR
 import traceback
@@ -6,7 +6,7 @@ import os
 import subprocess
 
 
-class DownloadFiles(BaseWorkerCustomer):
+class DownloadFiles(MainWorkerCustomer):
     def __init__(self, paths, mode, session, *args, **kwargs):
         super(DownloadFiles, self).__init__(*args, **kwargs)
 

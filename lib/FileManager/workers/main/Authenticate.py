@@ -1,8 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
 
 
-class Authenticate(BaseWorkerCustomer):
+class Authenticate(MainWorkerCustomer):
     def __init__(self, *args, **kwargs):
         super(Authenticate, self).__init__(*args, **kwargs)
 
@@ -19,6 +19,7 @@ class Authenticate(BaseWorkerCustomer):
             }
 
             self.on_success(result)
+            return result
 
         except Exception as e:
             result = {
@@ -26,5 +27,4 @@ class Authenticate(BaseWorkerCustomer):
                 "message": str(e),
                 "traceback": traceback.format_exc()
             }
-
             self.on_error(result)

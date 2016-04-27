@@ -1,9 +1,9 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
 import os
 
 
-class MakeDir(BaseWorkerCustomer):
+class MakeDir(MainWorkerCustomer):
     def __init__(self, path, *args, **kwargs):
         super(MakeDir, self).__init__(*args, **kwargs)
 
@@ -16,7 +16,10 @@ class MakeDir(BaseWorkerCustomer):
             self.logger.debug("FM MakeDir worker run(), abs_path = %s" % abs_path)
 
             try:
-                os.mkdir(abs_path, 0o700)
+                #os.mkdir(abs_path, 0o700)
+                sftp = self.conn.open_sftp()
+                sftp.mkdir(abs_path, 0o700)
+
                 info = self._make_file_info(abs_path)
                 info["name"] = self.path
 

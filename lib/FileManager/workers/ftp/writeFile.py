@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from misc.helperUnicode import as_bytes
 import traceback
@@ -8,7 +8,7 @@ import os
 import shutil
 
 
-class WriteFile(BaseWorkerCustomer):
+class WriteFile(MainWorkerCustomer):
     def __init__(self, path, content, encoding, session, *args, **kwargs):
         super(WriteFile, self).__init__(*args, **kwargs)
 

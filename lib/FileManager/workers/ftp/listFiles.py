@@ -1,10 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 import traceback
 import os
 
 
-class ListFiles(BaseWorkerCustomer):
+class ListFiles(MainWorkerCustomer):
     def __init__(self, path, session, *args, **kwargs):
         super(ListFiles, self).__init__(*args, **kwargs)
 

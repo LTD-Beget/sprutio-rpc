@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager import FM
 import traceback
 import os
@@ -7,7 +7,7 @@ import chardet
 import re
 
 
-class ReadFile(BaseWorkerCustomer):
+class ReadFile(MainWorkerCustomer):
     def __init__(self, path, *args, **kwargs):
         super(ReadFile, self).__init__(*args, **kwargs)
 
@@ -22,13 +22,9 @@ class ReadFile(BaseWorkerCustomer):
             abs_path = self.get_abs_path(self.path)
             self.logger.debug("FM ReadFile worker run(), abs_path = %s" % abs_path)
 
-            if not os.path.exists(abs_path):
-                raise OSError("File not exists")
+            sftp = self.conn.open_sftp()
 
-            if is_binary(abs_path):
-                raise OSError("File has binary content")
-
-            with open(abs_path, 'rb') as fd:
+            with sftp.open(abs_path, 'rb') as fd:
                 content = fd.read()
 
             # part of file content for charset detection
@@ -111,6 +107,7 @@ class ReadFile(BaseWorkerCustomer):
                 }
 
             self.on_success(result)
+            return result
 
         except Exception as e:
             result = {

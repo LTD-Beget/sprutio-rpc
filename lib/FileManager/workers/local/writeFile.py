@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from misc.helperUnicode import as_bytes
 import traceback
 import pprint
@@ -7,7 +7,7 @@ import os
 import shutil
 
 
-class WriteFile(BaseWorkerCustomer):
+class WriteFile(MainWorkerCustomer):
     def __init__(self, path, content, encoding, *args, **kwargs):
         super(WriteFile, self).__init__(*args, **kwargs)
 
@@ -31,29 +31,33 @@ class WriteFile(BaseWorkerCustomer):
                 self.logger.error("Error %s , %s" % (str(e), traceback.format_exc()))
                 raise e
 
-            temp_dir = os.path.abspath('/tmp/fm/' + self.random_hash())
-            os.makedirs(temp_dir)
-
             try:
-                content = decoded.encode(self.encoding)
-                f = open(abs_path, 'wb')
-                f.write(content)
-                f.close()
+                temp_dir = os.path.abspath('/tmp/fm/' + self.random_hash())
+                temp_path = temp_dir + "/" + self.random_hash()
+                os.makedirs(temp_dir)
 
+                sftp = self.conn.open_sftp()
+                # copy remote file localy
+                sftp.get(self.path, temp_path)
             except Exception as e:
-                self.logger.error(
-                    "Error write file %s , error %s , %s" % (str(abs_path), str(e), traceback.format_exc()))
-                raise Exception("Error saving file")
+                result = {"message": "Cant download remote file"}
 
+            if isinstance(self.content, bytes):
+                self.content = self.content.decode(self.encoding)
+
+            with sftp.file(self.path, "w") as fd:
+                fd.write(self.content)
+
+            file_info = self._make_file_info(self.path)
             shutil.rmtree(temp_dir, True)
 
-            answer = {
-                "item": self._make_file_info(abs_path),
-                "encoding": self.encoding
+            file_result = {
+                "encoding": self.encoding,
+                "item": file_info
             }
 
             result = {
-                "data": answer,
+                "data": file_result,
                 "error": False,
                 "message": None,
                 "traceback": None

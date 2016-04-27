@@ -1,9 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 import traceback
-import os
 
 
-class NewFile(BaseWorkerCustomer):
+class NewFile(MainWorkerCustomer):
 
     def __init__(self, path, *args, **kwargs):
         super(NewFile, self).__init__(*args, **kwargs)
@@ -17,14 +16,14 @@ class NewFile(BaseWorkerCustomer):
             self.logger.debug("FM NewFile worker run(), abs_path = %s" % abs_path)
 
             try:
-                if os.path.exists(abs_path):
-                    raise OSError("File path already exists")
+                sftp = self.conn.open_sftp()
 
-                fd = os.open(abs_path, os.O_CREAT, 0o600)
-                os.close(fd)
-
-                info = self._make_file_info(abs_path)
-                info["name"] = abs_path
+                pid = sftp.open(abs_path, 'w')
+                if pid:
+                    pid.close()
+                    info = self._make_file_info(abs_path)
+                else:
+                    raise Exception('Cannot write file resource on server')
 
                 result = {
                     "data": info,
@@ -34,6 +33,7 @@ class NewFile(BaseWorkerCustomer):
                 }
 
                 self.on_success(result)
+
             except OSError:
                 result = {
                     "error": True,

@@ -64,8 +64,10 @@ class BaseWorker(Process):
 
     @staticmethod
     def random_hash():
-        hash_str = random.getrandbits(128)
-        return "%032x" % hash_str
+        #hash_str = random.getrandbits(128)
+        #return #"%032x" % hash_str
+        import uuid
+        return str(uuid.uuid4())
 
     @staticmethod
     def get_rel_path(path, root_path=ROOT_MOUNT):

@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
 import os
@@ -7,8 +7,10 @@ import threading
 import shutil
 import time
 
+from config.main import TMP_DIR
 
-class CopyFromFtp(BaseWorkerCustomer):
+
+class CopyFromFtp(MainWorkerCustomer):
     def __init__(self, source, target, paths, overwrite, *args, **kwargs):
         super(CopyFromFtp, self).__init__(*args, **kwargs)
 
@@ -17,9 +19,20 @@ class CopyFromFtp(BaseWorkerCustomer):
         self.paths = paths
         self.overwrite = overwrite
 
+        self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
+
+    def _prepare(self):
+        if os.path.islink(self.download_dir):
+            raise Exception('Symlinks are not allowed!')
+
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
     def run(self):
         try:
+            self._prepare()
             self.preload()
+
             success_paths = []
             error_paths = []
 
@@ -56,7 +69,7 @@ class CopyFromFtp(BaseWorkerCustomer):
                     file_basename = ftp.path.basename(abs_path)
 
                     if ftp.isdir(abs_path):
-                        destination = os.path.join(target_path, file_basename)
+                        destination = os.path.join(self.download_dir, file_basename)
 
                         if not os.path.exists(destination):
                             os.makedirs(destination)
@@ -73,9 +86,13 @@ class CopyFromFtp(BaseWorkerCustomer):
                         for current, dirs, files in ftp.ftp.walk(ftp.to_string(abs_path)):
                             current = current.encode("ISO-8859-1").decode("UTF-8")
                             relative_root = os.path.relpath(current, source_path)
+
                             for d in dirs:
                                 d = d.encode("ISO-8859-1").decode("UTF-8")
-                                target_dir = os.path.join(target_path, relative_root, d)
+
+                                target_dir = os.path.join(self.download_dir, relative_root, d)
+                                print("FTP_TO_LOCAL target_dir:", target_dir)
+
                                 if not os.path.exists(target_dir):
                                     os.makedirs(target_dir)
                                 elif self.overwrite and os.path.exists(target_dir) and not os.path.isdir(target_dir):
@@ -87,11 +104,12 @@ class CopyFromFtp(BaseWorkerCustomer):
                                 else:
                                     pass
                                 operation_progress["processed"] += 1
+
                             for f in files:
                                 f = f.encode("ISO-8859-1").decode("UTF-8")
                                 source_file = os.path.join(current, f)
-                                target_file_path = os.path.join(target_path, relative_root)
-                                target_file = os.path.join(target_path, relative_root, f)
+                                target_file_path = os.path.join(self.download_dir, relative_root)
+                                target_file = os.path.join(self.download_dir, relative_root, f)
                                 if not os.path.exists(target_file):
                                     download_result = ftp.download(source_file, target_file_path)
                                     if not download_result['success'] or len(
@@ -111,6 +129,7 @@ class CopyFromFtp(BaseWorkerCustomer):
                                     See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
                                     In case copy file when destination is dir
                                     """
+                                    #self.ssh_manager.rmtree()
                                     shutil.rmtree(target_file)
                                     download_result = ftp.download(source_file, target_file_path)
                                     if not download_result['success'] or len(
@@ -120,18 +139,22 @@ class CopyFromFtp(BaseWorkerCustomer):
                                             "Download error")
                                 else:
                                     pass
-                                operation_progress["processed"] += 1
+
+                            self.ssh_manager.sync_new(self.download_dir, target_path, direction="lr")
+
+                            operation_progress["processed"] += 1
+
                     elif ftp.isfile(abs_path):
                         try:
-                            target_file = os.path.join(target_path, file_basename)
+                            target_file = os.path.join(self.download_dir, file_basename)
                             if not os.path.exists(target_file):
-                                download_result = ftp.download(abs_path, target_path)
+                                download_result = ftp.download(abs_path, self.download_dir)
                                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
                                     raise download_result['error'] if download_result[
                                                                           'error'] is not None else Exception(
                                         "Download error")
                             elif self.overwrite and os.path.exists(target_file) and not os.path.isdir(target_file):
-                                download_result = ftp.download(abs_path, target_path)
+                                download_result = ftp.download(abs_path, self.download_dir)
                                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
                                     raise download_result['error'] if download_result[
                                                                           'error'] is not None else Exception(
@@ -141,14 +164,16 @@ class CopyFromFtp(BaseWorkerCustomer):
                                 See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
                                 In case copy file when destination is dir
                                 """
-                                shutil.rmtree(target_file)
-                                download_result = ftp.download(abs_path, target_path)
+                                #shutil.rmtree(target_file)
+                                download_result = ftp.download(abs_path, self.download_dir)
                                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
                                     raise download_result['error'] if download_result[
                                                                           'error'] is not None else Exception(
                                         "Download error")
                             else:
                                 pass
+
+                            self.ssh_manager.sync_new(target_file, os.path.join(target_path, file_basename), direction="lr")
 
                         except Exception as e:
                             self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))

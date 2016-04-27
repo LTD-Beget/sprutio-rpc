@@ -1,4 +1,4 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.main.MainWorker import MainWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
 import traceback
@@ -6,7 +6,7 @@ import threading
 import time
 
 
-class CopyFtp(BaseWorkerCustomer):
+class CopyFtp(MainWorkerCustomer):
     def __init__(self, source, target, paths, overwrite, *args, **kwargs):
         super(CopyFtp, self).__init__(*args, **kwargs)
 
