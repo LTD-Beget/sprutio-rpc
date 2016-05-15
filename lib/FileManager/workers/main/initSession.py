@@ -1,6 +1,7 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.FM import Module, Action
 from lib.FileManager.FTPConnection import FTPConnection
+from lib.FileManager.WebDavConnection import WebDavConnection
 import traceback
 import threading
 import os
@@ -83,8 +84,11 @@ class InitSession(BaseWorkerCustomer):
 
             return actions
 
-        if self.session_type == Module.PUBLIC_FTP:
-            self.logger.info("FTP Actions preload")
+        if self.session_type == Module.PUBLIC_FTP or self.session_type == Module.PUBLIC_WEBDAV:
+            if self.session_type == Module.PUBLIC_FTP:
+                self.logger.info("FTP Actions preload")
+            else:
+                self.logger.info("WebDav Actions preload")
             actions = {
                 Action.ANALYZE_SIZE: True,
                 Action.CHMOD: True,
@@ -149,6 +153,15 @@ class InitSession(BaseWorkerCustomer):
             abs_path = os.path.abspath(path)
             ftp_connection = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
             listing = ftp_connection.list(path=abs_path)
+
+            return listing
+
+        if self.session_type == Module.PUBLIC_WEBDAV:
+            self.logger.info("WebDav Listing preload")
+            path = self.path if self.path is not None else '/'
+            abs_path = os.path.abspath(path)
+            webdav_connection = WebDavConnection.create(self.login, self.session.get('server_id'), self.logger)
+            listing = webdav_connection.list(path=abs_path)
 
             return listing
 

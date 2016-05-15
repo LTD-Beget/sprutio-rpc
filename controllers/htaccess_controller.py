@@ -4,8 +4,10 @@ from multiprocessing import Pipe
 from misc.helpers import byte_to_unicode_dict
 from lib.FileManager.workers.htaccess.readRulesLocal import ReadRulesLocal
 from lib.FileManager.workers.htaccess.readRulesFtp import ReadRulesFtp
+from lib.FileManager.workers.htaccess.readRulesWebDav import ReadRulesWebDav
 from lib.FileManager.workers.htaccess.saveRulesLocal import SaveRulesLocal
 from lib.FileManager.workers.htaccess.saveRulesFtp import SaveRulesFtp
+from lib.FileManager.workers.htaccess.saveRulesWebDav import SaveRulesWebDav
 import pprint
 import select
 
@@ -22,8 +24,15 @@ class HtaccessController(Controller):
                 "path": path.decode("UTF-8"),
                 "session": session
             })
-        else:
+        elif session.get('type') == FM.Module.REMOTE_FTP:
             return self.get_process_data(ReadRulesFtp, {
+                "login": login.decode('UTF-8'),
+                "password": password.decode('UTF-8'),
+                "path": path.decode("UTF-8"),
+                "session": session
+            })
+        else:
+            return self.get_process_data(ReadRulesWebDav, {
                 "login": login.decode('UTF-8'),
                 "password": password.decode('UTF-8'),
                 "path": path.decode("UTF-8"),
@@ -42,8 +51,16 @@ class HtaccessController(Controller):
                 "params": byte_to_unicode_dict(params),
                 "session": session
             })
-        else:
+        elif session.get('type') == FM.Module.PUBLIC_FTP:
             return self.get_process_data(SaveRulesFtp, {
+                "login": login.decode('UTF-8'),
+                "password": password.decode('UTF-8'),
+                "path": path.decode("UTF-8"),
+                "params": byte_to_unicode_dict(params),
+                "session": session
+            })
+        else:
+            return self.get_process_data(SaveRulesWebDav, {
                 "login": login.decode('UTF-8'),
                 "password": password.decode('UTF-8'),
                 "path": path.decode("UTF-8"),
