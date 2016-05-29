@@ -5,9 +5,9 @@ import codecs
 import ftplib
 import pprint
 import traceback
-import ftputil
+import webdav.client as wc
+import webdav.urn as urn
 import datetime
-from ftputil import file_transfer
 
 
 def transfer_from_ftp_to_webdav(source_ftp, target_webdav, source_path, target_path):
@@ -18,18 +18,19 @@ def transfer_from_ftp_to_webdav(source_ftp, target_webdav, source_path, target_p
     :param str source_path:
     :param str target_path:
     """
-    source_file = file_transfer.RemoteFile(source_ftp.ftp, source_ftp.to_byte(source_path), "rb")
-    target_file = file_transfer.RemoteFile(target_webdav, target_webdav.to_byte(target_path), "wb")
+    #source_file = file_transfer.RemoteFile(source_ftp.ftp, source_ftp.to_byte(source_path), "rb")
+    #target_file = file_transfer.RemoteFile(target_webdav, target_webdav.to_byte(target_path), "wb")
 
-    source_fobj = source_file.fobj()
-    try:
-        target_fobj = target_file.fobj()
-        try:
-            file_transfer.copyfileobj(source_fobj, target_fobj)
-        finally:
-            target_fobj.close()
-    finally:
-        source_fobj.close()
+    #source_fobj = source_file.fobj()
+    #try:
+        #target_fobj = target_file.fobj()
+        #try:
+            #file_transfer.copyfileobj(source_fobj, target_fobj)
+        #finally:
+            #target_fobj.close()
+    #finally:
+        #source_fobj.close()
+    pass
 
 
 class TimeZoneMSK(datetime.tzinfo):
@@ -45,7 +46,7 @@ class TimeZoneMSK(datetime.tzinfo):
 
 class WebDavSession(ftplib.FTP):
     def __init__(self, host, user, passwd, timeout):
-        ftplib.FTP.__init__(self)
+        #ftplib.FTP.__init__(self)
         self.set_debuglevel(2)
         # self.set_debuglevel(0)
         self.connect(host, timeout)
@@ -59,75 +60,74 @@ class WebDav:
 
         webdav_host = host
 
-        self.ftp_host = webdav_host
+        self.webdav_host = webdav_host
         self.host = host
         self.user = user
         self.passwd = passwd
 
-        self.ftp = ftputil.FTPHost(webdav_host,
-                                   user,
-                                   passwd,
-                                   port=21,
-                                   timeout=timeout,
-                                   session_factory=WebDavSession)
+        options = {
+            'webdav_hostname': self.webdav_host,
+            'webdav_login': self.user,
+            'webdav_password': self.passwd
+        }
 
-        self.ftp.stat_cache.enable()
-        self.ftp.stat_cache.max_age = 1800
-        self.ftp.keep_alive()
+        self.webdavClient = wc.Client(options)
+        self.resource = urn.Urn('/', True)
 
         self.logger = logger
         self._tzinfo = TimeZoneMSK()
 
     @property
     def path(self):
-        return self.ftp.path
+        return self.resource.path()
 
     def getcwd(self):
-        return self.ftp.getcwd()
+        return self.resource.parent()
 
     def close(self):
-        self.ftp.close()
+        pass
+        #self.webdav
 
     def chdir(self, path):
-        self.ftp.chdir(self.to_byte(path))
+        self.logger.info("Chdir called")
+        self.resource = urn.Urn(self.to_byte(path))
+        #self.webdav.chdir(self.to_byte(path))
 
     def _make_file_info(self, file_path):
+        self.logger.info("Make file info %s" % file_path)
 
-        info = self.lstat(file_path)
+        info = self.webdavClient.info(file_path)
 
         is_dir = False
         is_link = False
 
-        if stat.S_ISDIR(info.st_mode):
+        if self.webdavClient.is_dir(file_path):
             is_dir = True
-        elif stat.S_ISLNK(info.st_mode):
-            is_link = True
-        elif stat.S_ISREG(info.st_mode):
-            pass
         else:
             pass
 
-        file_name = os.path.basename(file_path)
-        file_dir = self.ftp.path.dirname(file_path)
+        file_name = urn.Urn(file_path).filename().replace("/", "")
+        file_dir = urn.Urn(file_path).parent()
 
+        ext = ''
         if is_dir:
             ext = b''
         else:
-            ext = self.path.splitext(file_name)[1][1:].lower()
+            ext = file_name.split('.')[1].lower()
 
-        mtime = info.st_mtime
+        mtime = info['modified']
 
         file_info = {
             "is_dir": is_dir,
             "is_link": is_link,
-            "name": file_name.decode("utf-8", errors="replace"),
-            "ext": ext.decode("utf-8", errors="replace"),
-            "path": file_dir.decode("utf-8", errors="replace"),
+            "name": file_name,
+            "ext": ext,
+            "path": file_dir,
             "owner": self.getowner(info),
             "mode": self.getmode(info),
-            "size": info.st_size if not is_dir else 0,
+            "size": info['size'] if not is_dir else 0,
             "mtime": mtime,
-            'mtime_str': datetime.datetime.fromtimestamp(mtime, self._tzinfo).strftime('%d.%m.%Y %H:%M:%S'),
+            'mtime_str': str(mtime),
         }
 
         return file_info
@@ -162,84 +162,80 @@ class WebDav:
 
     def size(self, path):
         try:
-            return self.ftp.path.getsize(self.to_byte(path))
+            return self.webdavClient.info(path)['size']
         except Exception as e:
-            self.logger.error("Error in FTP size(): %s, traceback = %s" % (str(e), traceback.format_exc()))
+            self.logger.error("Error in WebDav size(): %s, traceback = %s" % (str(e), traceback.format_exc()))
             return 0
 
-    def lstat(self, path):
-        return self.ftp.lstat(self.to_byte(path))
+    def info(self, path):
+        return self.webdavClient.info(self.to_byte(path))
 
     def exists(self, path):
-        return self.ftp.path.exists(self.to_byte(path))
+        return self.webdavClient.check(path)
 
     def isdir(self, path):
-        return self.ftp.path.isdir(self.to_byte(path))
+        return self.webdavClient.is_dir(path)
 
     def isfile(self, path):
-        return self.ftp.path.isfile(self.to_byte(path))
+        return self.webdavClient.path.isfile(self.to_byte(path))
 
     def islink(self, path):
-        return self.ftp.path.islink(self.to_byte(path))
+        return self.webdavClient.path.islink(self.to_byte(path))
 
     def clear_cache(self):
-        return self.ftp.stat_cache.clear()
+        return self.webdavClient.stat_cache.clear()
 
     def getmode(self, info):
         try:
-            mode = stat.S_IMODE(info.st_mode)
-            mode = oct(int(mode))
-            mode = mode[2:].zfill(3)  # for python 3 0o  as octal prefix
-            return mode
+            #mode = stat.S_IMODE(info.st_mode)
+            ##mode = oct(int(mode))
+            #mode = mode[2:].zfill(3)  # for python 3 0o  as octal prefix
+            return 'my mode'#mode
         except Exception as e:
-            self.logger.error("Error in FTP getmode(): %s, traceback = %s" % (str(e), traceback.format_exc()))
+            self.logger.error("Error in WebDav getmode(): %s, traceback = %s" % (str(e), traceback.format_exc()))
             raise Exception
 
     @staticmethod
     def getowner(info):
-        return info[4]
+        return 'my owner'
 
     def list(self, path):
-        byte_path = self.to_byte(path)
-        byte_path = self.ftp.path.abspath(byte_path)
-
-        self.chdir(byte_path)  # to surf from removed folder
+        self.logger.info("List called for %s" % path)
 
         flist = {
             "path": path,
             "items": []
         }
 
-        listdir = self.ftp.listdir(self.to_byte(path))
+        listdir = self.webdavClient.list(self.to_byte(path))
 
         for name in listdir:
-            if isinstance(name, str):
-                name = name.encode("ISO-8859-1")
-            item_path = self.ftp.path.join(byte_path, name)
+            item_path = self.resource.path() + name
             flist["items"].append(self._make_file_info(item_path))
 
         return flist
 
     def listdir(self, path):
+        self.logger.info("listdir called for %s" % path)
         byte_path = self.to_byte(path)
-        byte_path = self.ftp.path.abspath(byte_path)
+        byte_path = self.webdavClient.path.abspath(byte_path)
 
         self.chdir(path)
 
-        listdir = self.ftp.listdir(self.to_byte(path))
+        listdir = self.webdavClient.list(self.to_byte(path))
 
         listing = []
         for name in listdir:
             if isinstance(name, str):
                 name = name.encode("ISO-8859-1")
-            item_path = self.ftp.path.join(byte_path, name)
+            item_path = self.resource.path().join(byte_path, name)
             listing.append(item_path)
         return listing
 
     def file_info(self, path):
 
         byte_path = self.to_byte(path)
-        byte_path = self.ftp.path.abspath(byte_path)
+        byte_path = self.webdavClient.path.abspath(byte_path)
 
         file_info = self._make_file_info(byte_path)
         return file_info
@@ -247,10 +243,10 @@ class WebDav:
     def rename(self, source, target):
 
         byte_source = self.to_byte(source)
-        byte_source = self.ftp.path.abspath(byte_source)
+        byte_source = self.webdavClient.path.abspath(byte_source)
 
         byte_target = self.to_byte(target)
-        byte_target = self.ftp.path.abspath(byte_target)
+        byte_target = self.webdavClient.path.abspath(byte_target)
 
         if not self.path.exists(byte_source):
             raise Exception("Entry with source name not exists")
@@ -258,32 +254,25 @@ class WebDav:
         if self.path.exists(byte_target):
             raise Exception("Entry with target name already exists")
 
-        self.ftp.rename(byte_source, byte_target)
+        self.webdavClient.rename(byte_source, byte_target)
 
     def remove(self, target):
         byte_target = self.to_byte(target)
 
-        if self.isdir(target):
-            try:
-                self.ftp.rmtree(byte_target, True)
-            except Exception as e:
-                self.logger.error("Error in WebDav dir remove(): %s, traceback = %s" % (str(e), traceback.format_exc()))
-                raise Exception
-        else:
-            try:
-                self.ftp.remove(byte_target)
-            except Exception as e:
-                self.logger.error("Error in WebDav file remove(): %s, traceback = %s" % (str(e), traceback.format_exc()))
-                raise Exception
+        try:
+            self.webdavClient.clean(byte_target)
+        except Exception as e:
+            self.logger.error("Error in WebDav dir remove(): %s, traceback = %s" % (str(e), traceback.format_exc()))
+            raise Exception
 
     def file(self, target, mode):
-        return self.ftp.open(self.to_byte(target), mode)
+        return self.webdavClient.open(self.to_byte(target), mode)
 
     def mkdir(self, path):
-        return self.ftp.mkdir(self.to_byte(path))
+        return self.webdavClient.mkdir(self.to_byte(path))
 
     def makedirs(self, path):
-        return self.ftp.makedirs(self.to_byte(path))
+        return self.webdavClient.makedirs(self.to_byte(path))
 
     def download(self, source, target):
         result = {}
@@ -300,7 +289,7 @@ class WebDav:
             target_path = os.path.join(target, os.path.basename(source))
 
             try:
-                self.ftp.download(self.to_byte(source), target_path)
+                self.webdavClient.download(self.to_byte(source), target_path)
             except Exception as e:
                 failed.append(source)
                 self.logger.error("Error in WebDav download(): %s, traceback = %s" % (str(e), traceback.format_exc()))
@@ -346,12 +335,12 @@ class WebDav:
             else:
                 target_path = os.path.join(target, os.path.basename(byte_source))
 
-            if not overwrite and self.ftp.path.exists(target_path):
+            if not overwrite and self.webdavClient.path.exists(target_path):
                 failed.append(source)
                 raise Exception("File already exists and overwrite not permitted")
 
             try:
-                self.ftp.upload(source, self.to_string(target_path))
+                self.webdavClient.upload(source, self.to_string(target_path))
             except Exception as e:
                 failed.append(source)
                 self.logger.error("Error in WebDav upload(): %s, traceback = %s" % (str(e), traceback.format_exc()))
@@ -398,9 +387,9 @@ class WebDav:
         target = self.to_byte(target)
 
         try:
-            if self.ftp.path.isdir(source):
+            if self.webdavClient.path.isdir(source):
 
-                tree = self.ftp.walk(source)
+                tree = self.webdavClient.walk(source)
                 source_root = os.path.dirname(source)
 
                 first_level = True
@@ -448,7 +437,7 @@ class WebDav:
                             name = name.encode("ISO-8859-1")
                             source_filename = os.path.join(current_dir, name)
 
-                            if self.ftp.path.islink(source_filename):
+                            if self.webdavClient.path.islink(source_filename):
                                 continue
 
                             dest_filename = os.path.join(destination, os.path.basename(source_filename))
@@ -457,7 +446,7 @@ class WebDav:
                                 if not overwrite and os.path.exists(dest_filename):
                                     raise Exception("File already exists and overwrite not permitted")
 
-                                self.ftp.download(source_filename, dest_filename)
+                                self.webdavClient.download(source_filename, dest_filename)
                                 files_succeed.append(source_filename)
 
                             except Exception as e:
@@ -537,9 +526,9 @@ class WebDav:
         try:
             target = self.to_byte(target)
 
-            if self.ftp.path.exists(target):
+            if self.webdavClient.path.exists(target):
                 try:
-                    self.ftp.chmod(target, mode)
+                    self.webdavClient.chmod(target, mode)
                     succeed.append(self.to_string(target))
 
                 except Exception as e:
@@ -588,8 +577,8 @@ class WebDav:
             if recursive is False:
                 recursive_mode = 'none'
 
-            if self.ftp.path.isdir(target):
-                tree = self.ftp.walk(target)
+            if self.webdavClient.path.isdir(target):
+                tree = self.webdavClient.walk(target)
                 first_level = True
 
                 dirs_succeed = []
@@ -599,7 +588,7 @@ class WebDav:
                 files_failed = []
 
                 if recursive is False:
-                    self.ftp.chmod(target, mode)
+                    self.webdavClient.chmod(target, mode)
                     dirs_succeed.append(self.to_string(target))
 
                 for root, dirs, files in tree:
@@ -607,47 +596,47 @@ class WebDav:
                         if first_level:
                             current_dir = target
 
-                            if not self.ftp.path.exists(current_dir):
+                            if not self.webdavClient.path.exists(current_dir):
                                 failed.append(self.to_string(target))
                                 raise Exception("Directory is not exist")
 
-                            if self.ftp.path.exists(current_dir):
-                                self.ftp.chmod(current_dir, mode)
+                            if self.webdavClient.path.exists(current_dir):
+                                self.webdavClient.chmod(current_dir, mode)
                                 dirs_succeed.append(self.to_string(target))
 
                             first_level = False
                         else:
                             current_dir = os.path.join(root)
 
-                            if not self.ftp.path.exists(current_dir):
+                            if not self.webdavClient.path.exists(current_dir):
                                 failed.append(self.to_string(target))
                                 raise Exception("Directory is not exist")
 
-                            if self.ftp.path.exists(current_dir):
+                            if self.webdavClient.path.exists(current_dir):
                                 if recursive_mode == 'all' or recursive_mode == 'dirs':
-                                    self.ftp.chmod(current_dir, mode)
+                                    self.webdavClient.chmod(current_dir, mode)
                                     dirs_succeed.append(self.to_string(target))
 
                         for f in files:
-                            dest_filename = self.ftp.path.join(current_dir, f)
+                            dest_filename = self.webdavClient.path.join(current_dir, f)
 
-                            if not self.ftp.path.exists(dest_filename):
+                            if not self.webdavClient.path.exists(dest_filename):
                                 files_failed.append(self.to_string(target))
                                 raise Exception("File not exists")
 
                             if recursive_mode == 'all' or recursive_mode == 'files':
-                                self.ftp.chmod(dest_filename, mode)
+                                self.webdavClient.chmod(dest_filename, mode)
                                 files_succeed.append(self.to_string(target))
 
                         for d in dirs:
-                            dest_dirname = self.ftp.path.join(current_dir, d)
+                            dest_dirname = self.webdavClient.path.join(current_dir, d)
 
-                            if not self.ftp.path.exists(dest_dirname):
+                            if not self.webdavClient.path.exists(dest_dirname):
                                 dirs_failed.append(self.to_string(target))
                                 raise Exception("Directory not exists")
 
                             if recursive_mode == 'all' or recursive_mode == 'dirs':
-                                self.ftp.chmod(dest_dirname, mode)
+                                self.webdavClient.chmod(dest_dirname, mode)
                                 dirs_succeed.append(self.to_string(target))
 
                     except Exception as e:
@@ -717,15 +706,15 @@ class WebDav:
 
                             first_level = False
 
-                            if not overwrite and self.ftp.path.exists(destination):
+                            if not overwrite and self.webdavClient.path.exists(destination):
 
                                 failed.append(source)
                                 raise Exception("Directory already exists and overwrite not permitted")
                             else:
                                 succeed.append(source)
 
-                            if not self.ftp.path.exists(destination):
-                                self.ftp.mkdir(destination)
+                            if not self.webdavClient.path.exists(destination):
+                                self.webdavClient.mkdir(destination)
 
                         else:
 
@@ -748,10 +737,10 @@ class WebDav:
                             dest_filename = os.path.join(destination, os.path.basename(source_filename))
 
                             try:
-                                if not overwrite and self.ftp.path.exists(dest_filename):
+                                if not overwrite and self.webdavClient.path.exists(dest_filename):
                                     raise Exception("File already exists and overwrite not permitted")
 
-                                self.ftp.upload(source_filename, dest_filename, 'b')
+                                self.webdavClient.upload(source_filename, dest_filename, 'b')
                                 files_succeed.append(source_filename)
 
                             except Exception as e:
@@ -765,11 +754,11 @@ class WebDav:
                             dest_dirname = os.path.join(destination, os.path.basename(source_dirname))
 
                             try:
-                                if not overwrite and self.ftp.path.exists(dest_dirname):
+                                if not overwrite and self.webdavClient.path.exists(dest_dirname):
                                     raise Exception("Directory already exists and overwrite not permitted")
 
-                                if not self.ftp.path.exists(dest_dirname):
-                                    self.ftp.mkdir(dest_dirname)
+                                if not self.webdavClient.path.exists(dest_dirname):
+                                    self.webdavClient.mkdir(dest_dirname)
 
                                 dirs_succeed.append(source_dirname)
 
@@ -826,12 +815,12 @@ class WebDav:
         else:
             pid = str(uuid.uuid4())
 
-        self.fp[pid] = self.ftp.open(path, mode)
+        self.fp[pid] = self.webdavClient.open(path, mode)
         return pid
 
     def open(self, path, mode="rb", encoding=None, errors=None):
         byte_path = self.to_byte(path)
-        return self.ftp.open(path=byte_path, mode=mode, encoding=encoding, errors=errors)
+        return self.webdavClient.open(path=byte_path, mode=mode, encoding=encoding, errors=errors)
 
     def fread(self, pid, block=None):
         if block is not None:
@@ -871,21 +860,21 @@ class WebDav:
                     failed.append(source)
                     raise Exception('file exist and cannot be overwritten')
                 try:
-                    source_file = self.ftp.open(self.to_byte(source), "rb")
+                    source_file = self.webdavClient.open(self.to_byte(source), "rb")
 
                 except Exception as e:
                     failed.append(source)
                     raise Exception('Cannot open source file %s' % (str(e),))
 
                 try:
-                    destination_file = self.ftp.open(self.to_byte(destination), "wb")
+                    destination_file = self.webdavClient.open(self.to_byte(destination), "wb")
 
                 except Exception as e:
                     failed.append(source)
                     raise Exception('Cannot open destination file %s' % (str(e)))
 
                 try:
-                    self.ftp.copyfileobj(source_file, destination_file, callback=callback)
+                    self.webdavClient.copyfileobj(source_file, destination_file, callback=callback)
 
                 except Exception as e:
                     failed.append(source)
@@ -929,8 +918,8 @@ class WebDav:
         target_name = os.path.basename(rename) if rename is not None else os.path.basename(source)
 
         try:
-            if self.ftp.path.isdir(self.to_byte(source)):
-                tree = self.ftp.walk(self.to_byte(source))
+            if self.webdavClient.path.isdir(self.to_byte(source)):
+                tree = self.webdavClient.walk(self.to_byte(source))
                 first_level = True
 
                 for current, dirs, files in tree:
@@ -957,17 +946,17 @@ class WebDav:
                         for f in files:
                             f = f.encode("ISO-8859-1").decode('utf-8', errors='replace')
                             source_filename = os.path.join(current, f)
-                            source_file = self.ftp.open(self.to_byte(source_filename), "rb")
+                            source_file = self.webdavClient.open(self.to_byte(source_filename), "rb")
 
                             dest_filename = os.path.abspath(
-                                    self.ftp.path.join(os.path.join(target, target_name), relative_root, f))
+                                    self.webdavClient.path.join(os.path.join(target, target_name), relative_root, f))
 
                             try:
-                                if not overwrite and self.ftp.path.exists(dest_filename):
+                                if not overwrite and self.webdavClient.path.exists(dest_filename):
                                     raise Exception("File already exists and overwrite not permitted")
 
-                                dest_file = self.ftp.open(self.to_byte(dest_filename), "wb")
-                                self.ftp.copyfileobj(source_file, dest_file)
+                                dest_file = self.webdavClient.open(self.to_byte(dest_filename), "wb")
+                                self.webdavClient.copyfileobj(source_file, dest_file)
 
                                 source_file.close()
                                 dest_file.close()
@@ -984,7 +973,7 @@ class WebDav:
                             d = d.encode("ISO-8859-1").decode('utf-8', errors='replace')
                             source_dirname = os.path.join(current, d)
                             dest_dirname = os.path.abspath(
-                                    self.ftp.path.join(os.path.join(target, target_name), relative_root, d))
+                                    self.webdavClient.path.join(os.path.join(target, target_name), relative_root, d))
 
                             try:
                                 if not overwrite and self.exists(dest_dirname):

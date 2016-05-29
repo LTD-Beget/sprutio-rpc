@@ -5,13 +5,51 @@ from lib.FileManager.workers.webdav.createWebDavConnection import CreateWebDavCo
 from lib.FileManager.workers.webdav.removeWebDavConnection import RemoveWebDavConnection
 from lib.FileManager.workers.webdav.updateWebDavConnection import UpdateWebDavConnection
 
+from lib.FileManager.workers.webdav.listFiles import ListFiles
+from lib.FileManager.workers.webdav.makeDir import MakeDir
+from lib.FileManager.workers.webdav.removeFiles import RemoveFiles
+
+from lib.FileManager.workers.main.initSession import InitSession
+
 from base.exc import Error
 from lib.FileManager import FM
 from multiprocessing import Pipe, Process
+from lib.FileManager.OperationStatus import OperationStatus
 import traceback
+from misc.helpers import byte_to_unicode_dict, byte_to_unicode_list
 
 
 class WebdavController(Controller):
+    def action_list_files(self, login, password, status_id, path, session):
+        try:
+            self.logger.info("FM starting subprocess worker list_files %s %s", pprint.pformat(status_id),
+                         pprint.pformat(login))
+
+            p = Process(target=self.run_subprocess,
+                        args=(self.logger, ListFiles, {
+                            "login": login.decode('UTF-8'),
+                            "password": password.decode('UTF-8'),
+                            "path": path.decode("UTF-8"),
+                            "session": byte_to_unicode_dict(session)
+                        }))
+            p.start()
+        except Exception as e:
+            result = {
+                "error": True,
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            }
+
+            return result
+
+    def action_make_dir(self, login, password, path, session):
+
+        return self.get_process_data(MakeDir, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "path": path.decode("UTF-8"),
+            "session": byte_to_unicode_dict(session)
+        })
 
     def action_create_connection(self, login, password, host, webdav_user, webdav_password):
 
@@ -80,6 +118,133 @@ class WebdavController(Controller):
                 process.terminate()
 
         return self.on_finish(process, result)
+
+    @staticmethod
+    def run_subprocess(logger, worker_object, status_id, name, params):
+        logger.info(
+                "FM call WebDav long action %s %s %s" % (
+                    name, pprint.pformat(status_id), pprint.pformat(params.get("login"))))
+
+        def async_check_operation(op_status_id):
+            operation = OperationStatus.load(op_status_id)
+            logger.info("Operation id='%s' status is '%s'" % (str(status_id), operation.status))
+            if operation.status != OperationStatus.STATUS_WAIT:
+                raise Error("Operation status is not wait - aborting")
+
+        def async_on_error(op_status_id, data=None, progress=None, pid=None, pname=None):
+            logger.info("Process on_error()")
+            operation = OperationStatus.load(op_status_id)
+            data = {
+                'id': status_id,
+                'status': 'error',
+                'data': data,
+                'progress': progress,
+                'pid': pid,
+                'pname': pname
+            }
+            operation.set_attributes(data)
+            operation.save()
+
+        def async_on_success(op_status_id, data=None, progress=None, pid=None, pname=None):
+            logger.info("Process on_success()")
+            operation = OperationStatus.load(op_status_id)
+            data = {
+                'id': op_status_id,
+                'status': OperationStatus.STATUS_SUCCESS,
+                'data': data,
+                'progress': progress,
+                'pid': pid,
+                'pname': pname
+            }
+            operation.set_attributes(data)
+            operation.save()
+
+        def async_on_running(op_status_id, data=None, progress=None, pid=None, pname=None):
+            logger.info("Process on_running()")
+            operation = OperationStatus.load(op_status_id)
+            data = {
+                'id': op_status_id,
+                'status': OperationStatus.STATUS_RUNNING,
+                'data': data,
+                'progress': progress,
+                'pid': pid,
+                'pname': pname
+            }
+            operation.set_attributes(data)
+            operation.save()
+
+        def async_on_abort(op_status_id, data=None, progress=None, pid=None, pname=None):
+            logger.info("Process on_abort()")
+            operation = OperationStatus.load(op_status_id)
+            data = {
+                'id': op_status_id,
+                'status': OperationStatus.STATUS_ABORT,
+                'data': data,
+                'progress': progress,
+                'pid': pid,
+                'pname': pname
+            }
+            operation.set_attributes(data)
+            operation.save()
+
+        def async_on_finish(worker_process, op_status_id, pid=None, pname=None):
+            logger.info("Process on_finish()")
+            logger.info("Process exit code %s info = %s", str(process.exitcode), pprint.pformat(process))
+
+            if worker_process.exitcode < 0:
+                async_on_abort(status_id, pid=pid, pname=pname)
+            elif worker_process.exitcode > 0:
+                async_on_error(op_status_id, pid=pid, pname=pname)
+
+        try:
+            async_check_operation(status_id)
+            kwargs = {
+                "name": name,
+                "status_id": status_id,
+                "logger": logger,
+                "on_running": async_on_running,
+                "on_abort": async_on_abort,
+                "on_error": async_on_error,
+                "on_success": async_on_success
+            }
+
+            kwargs.update(params)
+
+            process = worker_object(**kwargs)
+            process.start()
+            process.join()
+            async_on_finish(process, status_id, pid=process.pid, pname=process.name)
+
+        except Exception as e:
+            result = {
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            }
+
+            async_on_error(status_id, result)
+
+    def action_remove_files(self, login, password, status_id, paths, session):
+        try:
+            self.logger.info("FM starting subprocess worker remove_files %s %s", pprint.pformat(status_id),
+                             pprint.pformat(login))
+
+            p = Process(target=self.run_subprocess,
+                        args=(self.logger, RemoveFiles, status_id.decode('UTF-8'), FM.Action.REMOVE, {
+                            "login": login.decode('UTF-8'),
+                            "password": password.decode('UTF-8'),
+                            "paths": byte_to_unicode_list(paths),
+                            "session": byte_to_unicode_dict(session)
+                        }))
+            p.start()
+            return {"error": False}
+        except Exception as e:
+            result = {
+                "error": True,
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            }
+
+            return result
 
     def on_finish(self, process, data=None):
         self.logger.info("Process on_finish()")
