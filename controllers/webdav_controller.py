@@ -8,6 +8,7 @@ from lib.FileManager.workers.webdav.updateWebDavConnection import UpdateWebDavCo
 from lib.FileManager.workers.webdav.listFiles import ListFiles
 from lib.FileManager.workers.webdav.makeDir import MakeDir
 from lib.FileManager.workers.webdav.removeFiles import RemoveFiles
+from lib.FileManager.workers.webdav.downloadFiles import DownloadFiles
 
 from lib.FileManager.workers.main.initSession import InitSession
 
@@ -20,27 +21,14 @@ from misc.helpers import byte_to_unicode_dict, byte_to_unicode_list
 
 
 class WebdavController(Controller):
-    def action_list_files(self, login, password, status_id, path, session):
-        try:
-            self.logger.info("FM starting subprocess worker list_files %s %s", pprint.pformat(status_id),
-                         pprint.pformat(login))
+    def action_list_files(self, login, password, path, session):
 
-            p = Process(target=self.run_subprocess,
-                        args=(self.logger, ListFiles, {
-                            "login": login.decode('UTF-8'),
-                            "password": password.decode('UTF-8'),
-                            "path": path.decode("UTF-8"),
-                            "session": byte_to_unicode_dict(session)
-                        }))
-            p.start()
-        except Exception as e:
-            result = {
-                "error": True,
-                "message": str(e),
-                "traceback": traceback.format_exc()
-            }
-
-            return result
+        return self.get_process_data(ListFiles, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "path": path.decode("UTF-8"),
+            "session": byte_to_unicode_dict(session)
+        })
 
     def action_make_dir(self, login, password, path, session):
 
@@ -60,6 +48,16 @@ class WebdavController(Controller):
             "webdav_user": webdav_user.decode('UTF-8'),
             "webdav_password": webdav_password.decode('UTF-8')
         })
+
+    def action_download_files(self, login, password, paths, mode, session):
+
+        return self.get_process_data(DownloadFiles, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "paths": byte_to_unicode_list(paths),
+            "mode": mode.decode('UTF-8'),
+            "session": byte_to_unicode_dict(session)
+        }, timeout=7200)
 
     def action_edit_connection(self, login, password, connection_id, host, webdav_user, webdav_password):
 

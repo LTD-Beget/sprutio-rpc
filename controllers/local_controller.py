@@ -15,6 +15,7 @@ from lib.FileManager.workers.local.findFiles import FindFiles
 from lib.FileManager.workers.local.createCopy import CreateCopy
 from lib.FileManager.workers.local.copyLocal import CopyLocal
 from lib.FileManager.workers.local.copyToFtp import CopyToFtp
+from lib.FileManager.workers.local.copyToWebDav import CopyToWebDav
 from lib.FileManager.workers.local.moveLocal import MoveLocal
 from lib.FileManager.workers.local.moveToFtp import MoveToFtp
 from lib.FileManager.workers.local.downloadFiles import DownloadFiles
@@ -394,9 +395,12 @@ class LocalController(Controller):
             if source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyLocal, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.HOME and (target.get('type') == FM.Module.PUBLIC_FTP or target.get('type') == FM.Module.PUBLIC_WEBDAV):
+            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.PUBLIC_FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyToFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.PUBLIC_WEBDAV:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, CopyToWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
             else:
                 raise Exception("Unable to get worker for these source and target")
 
