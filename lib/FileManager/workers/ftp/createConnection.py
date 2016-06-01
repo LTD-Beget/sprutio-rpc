@@ -5,10 +5,11 @@ import sqlite3
 
 
 class CreateConnection(BaseWorkerCustomer):
-    def __init__(self, host, ftp_user, ftp_password, *args, **kwargs):
+    def __init__(self, host, port, ftp_user, ftp_password, *args, **kwargs):
         super(CreateConnection, self).__init__(*args, **kwargs)
 
         self.host = host
+        self.port = port
         self.ftp_user = ftp_user
         self.ftp_password = ftp_password
 
@@ -43,13 +44,13 @@ class CreateConnection(BaseWorkerCustomer):
 
         try:
             cursor.execute("INSERT INTO ftp_servers (fm_login, host, port, user, password) VALUES (?,?,?,?,?)",
-                           (self.login, self.host, 21, self.ftp_user, self.ftp_password))
+                           (self.login, self.host, self.port, self.ftp_user, self.ftp_password))
 
             db.commit()
             connection = {
                 'id': cursor.lastrowid,
                 'host': self.host,
-                'port': 21,
+                'port': self.port,
                 'user': self.ftp_user,
                 'decryptedPassword': self.ftp_password
             }

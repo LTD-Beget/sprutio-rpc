@@ -5,11 +5,12 @@ import sqlite3
 
 
 class UpdateConnection(BaseWorkerCustomer):
-    def __init__(self, connection_id, host, ftp_user, ftp_password, *args, **kwargs):
+    def __init__(self, connection_id, host, port, ftp_user, ftp_password, *args, **kwargs):
         super(UpdateConnection, self).__init__(*args, **kwargs)
 
         self.connection_id = connection_id
         self.host = host
+        self.port = port
         self.ftp_user = ftp_user
         self.ftp_password = ftp_password
 
@@ -49,7 +50,7 @@ class UpdateConnection(BaseWorkerCustomer):
                                 user = ?,
                                 password = ?
                               WHERE id = ? AND fm_login = ?
-                           ''', (self.host, 21, self.ftp_user, self.ftp_password, self.connection_id, self.login))
+                           ''', (self.host, self.port, self.ftp_user, self.ftp_password, self.connection_id, self.login))
 
             db.commit()
             if cursor.rowcount < 1:
@@ -58,7 +59,7 @@ class UpdateConnection(BaseWorkerCustomer):
             connection = {
                 'id': self.connection_id,
                 'host': self.host,
-                'port': 21,
+                'port': self.port,
                 'user': self.ftp_user,
                 'decryptedPassword': self.ftp_password
             }

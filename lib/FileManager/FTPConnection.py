@@ -16,10 +16,11 @@ class FTPConnection(object):
         :param server_id:
         :param logger:
         :return: FTP
+        :rtype: FTP
         """
         db = sqlite3.connect(DB_FILE)
         db.execute("PRAGMA journal_mode=MEMORY")
-        print("Database created and opened successfully file = %s" % DB_FILE)
+        logger.info("Database created and opened successfully file = %s" % DB_FILE)
 
         cursor = db.cursor()
 
@@ -33,7 +34,7 @@ class FTPConnection(object):
             ftp_session = {
                 'id': result[0],
                 'host': result[2],
-                'port': result[3],
+                'port': int(result[3]),
                 'user': result[4],
                 'password': result[5]
             }

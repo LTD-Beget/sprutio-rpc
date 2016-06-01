@@ -1,36 +1,71 @@
-from beget_msgpack import Controller
 import pprint
 import select
-from lib.FileManager.workers.ftp.createConnection import CreateConnection
-from lib.FileManager.workers.ftp.removeConnection import RemoveConnection
-from lib.FileManager.workers.ftp.updateConnection import UpdateConnection
-from lib.FileManager.workers.ftp.listFiles import ListFiles
-from lib.FileManager.workers.ftp.makeDir import MakeDir
-from lib.FileManager.workers.ftp.newFile import NewFile
-from lib.FileManager.workers.ftp.renameFile import RenameFile
-from lib.FileManager.workers.ftp.readFile import ReadFile
-from lib.FileManager.workers.ftp.writeFile import WriteFile
-from lib.FileManager.workers.ftp.chmodFiles import ChmodFiles
-from lib.FileManager.workers.ftp.removeFiles import RemoveFiles
-from lib.FileManager.workers.ftp.createCopy import CreateCopy
-from lib.FileManager.workers.ftp.copyFtp import CopyFtp
-from lib.FileManager.workers.ftp.copyBetweenFtp import CopyBetweenFtp
-from lib.FileManager.workers.local.copyFromFtp import CopyFromFtp
-from lib.FileManager.workers.ftp.moveFtp import MoveFtp
-from lib.FileManager.workers.ftp.moveBetweenFtp import MoveBetweenFtp
-from lib.FileManager.workers.ftp.downloadFiles import DownloadFiles
-from lib.FileManager.workers.ftp.readImages import ReadImages
-from lib.FileManager.workers.ftp.uploadFile import UploadFile
-from lib.FileManager.workers.local.moveFromFtp import MoveFromFtp
-from lib.FileManager.OperationStatus import OperationStatus
+import traceback
+from multiprocessing import Pipe, Process
+
+from beget_msgpack import Controller
+
 from base.exc import Error
 from lib.FileManager import FM
-from multiprocessing import Pipe, Process
-import traceback
+from lib.FileManager.OperationStatus import OperationStatus
+from lib.FileManager.workers.ftp.chmodFiles import ChmodFiles
+from lib.FileManager.workers.ftp.copyBetweenFtp import CopyBetweenFtp
+from lib.FileManager.workers.ftp.copyFromFtp import CopyFromFtp
+from lib.FileManager.workers.ftp.moveFromFtpToSftp import MoveFromFtpToSftp
+from lib.FileManager.workers.ftp.copyFtp import CopyFtp
+from lib.FileManager.workers.ftp.createConnection import CreateConnection
+from lib.FileManager.workers.ftp.createCopy import CreateCopy
+from lib.FileManager.workers.ftp.downloadFiles import DownloadFiles
+from lib.FileManager.workers.ftp.listFiles import ListFiles
+from lib.FileManager.workers.ftp.makeDir import MakeDir
+from lib.FileManager.workers.ftp.moveBetweenFtp import MoveBetweenFtp
+from lib.FileManager.workers.ftp.moveFromFtp import MoveFromFtp
+from lib.FileManager.workers.ftp.copyFromFtpToSftp import CopyFromFtpToSftp
+from lib.FileManager.workers.ftp.moveFtp import MoveFtp
+from lib.FileManager.workers.ftp.newFile import NewFile
+from lib.FileManager.workers.ftp.readFile import ReadFile
+from lib.FileManager.workers.ftp.readImages import ReadImages
+from lib.FileManager.workers.ftp.removeConnection import RemoveConnection
+from lib.FileManager.workers.ftp.removeFiles import RemoveFiles
+from lib.FileManager.workers.ftp.renameFile import RenameFile
+from lib.FileManager.workers.ftp.updateConnection import UpdateConnection
+from lib.FileManager.workers.ftp.uploadFile import UploadFile
+from lib.FileManager.workers.ftp.writeFile import WriteFile
 from misc.helpers import byte_to_unicode_dict, byte_to_unicode_list
 
 
 class FtpController(Controller):
+    def action_create_connection(self, login, password, host, port, ftp_user, ftp_password):
+
+        return self.get_process_data(CreateConnection, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "host": host.decode('UTF-8'),
+            "port": port,
+            "ftp_user": ftp_user.decode('UTF-8'),
+            "ftp_password": ftp_password.decode('UTF-8')
+        })
+
+    def action_edit_connection(self, login, password, connection_id, host, port, ftp_user, ftp_password):
+
+        return self.get_process_data(UpdateConnection, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "connection_id": connection_id,
+            "host": host.decode('UTF-8'),
+            "port": port,
+            "ftp_user": ftp_user.decode('UTF-8'),
+            "ftp_password": ftp_password.decode('UTF-8')
+        })
+
+    def action_remove_connection(self, login, password, connection_id):
+
+        return self.get_process_data(RemoveConnection, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "connection_id": connection_id
+        })
+
     def action_list_files(self, login, password, path, session):
 
         return self.get_process_data(ListFiles, {
@@ -58,16 +93,6 @@ class FtpController(Controller):
             "session": byte_to_unicode_dict(session)
         })
 
-    def action_rename_file(self, login, password, source_path, target_path, session):
-
-        return self.get_process_data(RenameFile, {
-            "login": login.decode('UTF-8'),
-            "password": password.decode('UTF-8'),
-            "source_path": source_path.decode("UTF-8"),
-            "target_path": target_path.decode("UTF-8"),
-            "session": byte_to_unicode_dict(session)
-        })
-
     def action_read_file(self, login, password, path, session):
 
         return self.get_process_data(ReadFile, {
@@ -88,33 +113,14 @@ class FtpController(Controller):
             "session": byte_to_unicode_dict(session)
         })
 
-    def action_create_connection(self, login, password, host, ftp_user, ftp_password):
+    def action_rename_file(self, login, password, source_path, target_path, session):
 
-        return self.get_process_data(CreateConnection, {
+        return self.get_process_data(RenameFile, {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
-            "host": host.decode('UTF-8'),
-            "ftp_user": ftp_user.decode('UTF-8'),
-            "ftp_password": ftp_password.decode('UTF-8')
-        })
-
-    def action_edit_connection(self, login, password, connection_id, host, ftp_user, ftp_password):
-
-        return self.get_process_data(UpdateConnection, {
-            "login": login.decode('UTF-8'),
-            "password": password.decode('UTF-8'),
-            "connection_id": connection_id,
-            "host": host.decode('UTF-8'),
-            "ftp_user": ftp_user.decode('UTF-8'),
-            "ftp_password": ftp_password.decode('UTF-8')
-        })
-
-    def action_remove_connection(self, login, password, connection_id):
-
-        return self.get_process_data(RemoveConnection, {
-            "login": login.decode('UTF-8'),
-            "password": password.decode('UTF-8'),
-            "connection_id": connection_id
+            "source_path": source_path.decode("UTF-8"),
+            "target_path": target_path.decode("UTF-8"),
+            "session": byte_to_unicode_dict(session)
         })
 
     def action_download_files(self, login, password, paths, mode, session):
@@ -149,9 +155,7 @@ class FtpController(Controller):
 
     @staticmethod
     def run_subprocess(logger, worker_object, status_id, name, params):
-        logger.info(
-                "FM call FTP long action %s %s %s" % (
-                    name, pprint.pformat(status_id), pprint.pformat(params.get("login"))))
+        logger.info("FM call FTP long action %s %s %s" % ( name, pprint.pformat(status_id), pprint.pformat(params.get("login"))))
 
         def async_check_operation(op_status_id):
             operation = OperationStatus.load(op_status_id)
@@ -318,6 +322,9 @@ class FtpController(Controller):
             if source.get('type') == FM.Module.PUBLIC_FTP and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif source.get('type') == FM.Module.PUBLIC_FTP and target.get('type') == FM.Module.SFTP:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, CopyFromFtpToSftp, status_id.decode('UTF-8'), FM.Action.COPY, params))
             elif (source.get('type') == FM.Module.PUBLIC_FTP and target.get('type') == FM.Module.PUBLIC_FTP) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
@@ -361,6 +368,9 @@ class FtpController(Controller):
             if source.get('type') == FM.Module.PUBLIC_FTP and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif source.get('type') == FM.Module.PUBLIC_FTP and target.get('type') == FM.Module.SFTP:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, MoveFromFtpToSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             elif (source.get('type') == FM.Module.PUBLIC_FTP and target.get('type') == FM.Module.PUBLIC_FTP) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,

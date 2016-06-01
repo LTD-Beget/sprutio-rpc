@@ -38,9 +38,6 @@ class CreateCopy(BaseWorkerCustomer):
                 dir_listing = os.listdir(dirname)
 
                 for dir_path in dir_paths:
-                    i = 0
-                    exist = False
-
                     if os.path.isdir(dir_path):
                         filename = os.path.basename(dir_path)
                         ext = ''
@@ -48,39 +45,15 @@ class CreateCopy(BaseWorkerCustomer):
                         filename, file_extension = os.path.splitext(dir_path)
                         ext = file_extension
 
-                    copy_name = filename + ' copy' + ext if i == 0 else filename + ' copy(' + str(i) + ')' + ext
-
-                    for dir_current_path in dir_listing:
-                        if copy_name == dir_current_path:
-                            exist = True
-                            i += 1
-                            break
-
-                    if not exist:
-                        copy_paths.append({
-                            'source': dir_path,
-                            'target': os.path.join(dirname, copy_name)
-                        })
-
+                    i = 0
+                    exist = True
                     while exist:
-                        exist = False
-
-                        if os.path.isdir(dir_path):
-                            filename = os.path.basename(dir_path)
-                            ext = ''
-                        else:
-                            filename, file_extension = os.path.splitext(dir_path)
-                            ext = file_extension
-
                         copy_name = filename + ' copy' + ext if i == 0 else filename + ' copy(' + str(i) + ')' + ext
 
-                        for dir_current_path in dir_listing:
-                            if copy_name == dir_current_path:
-                                exist = True
-                                i += 1
-                                break
-
-                        if not exist:
+                        if copy_name in dir_listing:
+                            i += 1
+                        else:
+                            exist = False
                             dir_listing.append(copy_name)
                             copy_paths.append({
                                 'source': dir_path,

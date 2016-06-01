@@ -1,6 +1,7 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.progress_helper import update_progress
 import os
 import traceback
 import threading
@@ -47,7 +48,7 @@ class CopyFromFtp(BaseWorkerCustomer):
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
-            t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
+            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
             t_progress.start()
 
             for path in self.paths:
@@ -207,28 +208,4 @@ class CopyFromFtp(BaseWorkerCustomer):
 
         progress_object["total_done"] = True
         self.logger.debug("done get_total()")
-        return
-
-    def update_progress(self, progress_object):
-        self.logger.debug("start update_progress()")
-        next_tick = time.time() + REQUEST_DELAY
-
-        self.on_running(self.status_id, pid=self.pid, pname=self.name)
-
-        while not progress_object.get("operation_done"):
-            if time.time() > next_tick and progress_object.get("total_done"):
-                progress = {
-                    'percent': round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2),
-                    'text': str(int(round(float(progress_object.get("processed")) / float(progress_object.get("total")),
-                                          2) * 100)) + '%'
-                }
-
-                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-            elif time.time() > next_tick:
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-
-        self.logger.debug("done update_progress()")
         return
