@@ -9,8 +9,7 @@ from lib.FileManager.workers.webdav.listFiles import ListFiles
 from lib.FileManager.workers.webdav.makeDir import MakeDir
 from lib.FileManager.workers.webdav.removeFiles import RemoveFiles
 from lib.FileManager.workers.webdav.downloadFiles import DownloadFiles
-
-from lib.FileManager.workers.main.initSession import InitSession
+from lib.FileManager.workers.webdav.renameFile import RenameFile
 
 from base.exc import Error
 from lib.FileManager import FM
@@ -22,7 +21,6 @@ from misc.helpers import byte_to_unicode_dict, byte_to_unicode_list
 
 class WebdavController(Controller):
     def action_list_files(self, login, password, path, session):
-
         return self.get_process_data(ListFiles, {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
@@ -36,6 +34,16 @@ class WebdavController(Controller):
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
             "path": path.decode("UTF-8"),
+            "session": byte_to_unicode_dict(session)
+        })
+
+    def action_rename_file(self, login, password, source_path, target_path, session):
+
+        return self.get_process_data(RenameFile, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "source_path": source_path.decode("UTF-8"),
+            "target_path": target_path.decode("UTF-8"),
             "session": byte_to_unicode_dict(session)
         })
 

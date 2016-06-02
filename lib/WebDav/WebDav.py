@@ -176,9 +176,6 @@ class WebDav:
     def isfile(self, path):
         return not self.webdavClient.is_dir(self.to_byte(path))
 
-    def clear_cache(self):
-        return self.webdavClient.stat_cache.clear()
-
     def getmode(self, info):
         try:
             return 'my mode'
@@ -224,18 +221,13 @@ class WebDav:
 
     def rename(self, source, target):
 
-        byte_source = self.to_byte(source)
-
-        byte_target = self.to_byte(target)
-
-        if not self.path.exists(byte_source):
+        if not self.exists(source):
             raise Exception("Entry with source name not exists")
 
-        if self.path.exists(byte_target):
+        if self.exists(target):
             raise Exception("Entry with target name already exists")
 
-        resource = self.webdavClient.resource(byte_source)
-        resource.rename(byte_target)
+        self.webdavClient.move(source, target)
 
     def remove(self, target):
         byte_target = self.to_byte(target)
@@ -346,10 +338,3 @@ class WebDav:
             result['file_list'] = file_list
 
             return result
-
-
-
-
-
-
-
