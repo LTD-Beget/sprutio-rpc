@@ -91,7 +91,6 @@ class WebDav:
         #self.webdav
 
     def _make_file_info(self, file_path):
-        self.logger.info("Make file info %s" % file_path)
 
         info = self.webdavClient.info(file_path)
 
@@ -107,10 +106,11 @@ class WebDav:
         file_dir = urn.Urn(file_path).parent()
 
         ext = ''
+        divide = file_name.split('.')
         if is_dir:
             ext = b''
-        else:
-            ext = file_name.split('.')[1].lower()
+        elif len(divide) > 1:
+            ext = file_name.split('.')[-1].lower()
 
         mtime = info['modified']
 
@@ -184,8 +184,6 @@ class WebDav:
             raise Exception
 
     def list(self, path):
-        self.logger.info("List %s" % path)
-
         flist = {
             "path": path,
             "items": []
@@ -208,7 +206,7 @@ class WebDav:
         for name in listdir:
             if isinstance(name, str):
                 name = name.encode("ISO-8859-1")
-            item_path = self.resource.path().join(byte_path, name)
+            item_path = '{0}/{1}'.format(byte_path, name)
             listing.append(item_path)
         return listing
 
@@ -220,7 +218,6 @@ class WebDav:
         return file_info
 
     def rename(self, source, target):
-
         if not self.exists(source):
             raise Exception("Entry with source name not exists")
 
@@ -303,10 +300,6 @@ class WebDav:
         failed = []
 
         try:
-            if not self.isfile(source):
-                failed.append(source)
-                raise Exception("Source is not a file")
-
             target_path = os.path.join(target, os.path.basename(source))
 
             try:

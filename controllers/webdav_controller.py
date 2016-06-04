@@ -10,6 +10,7 @@ from lib.FileManager.workers.webdav.makeDir import MakeDir
 from lib.FileManager.workers.webdav.removeFiles import RemoveFiles
 from lib.FileManager.workers.webdav.downloadFiles import DownloadFiles
 from lib.FileManager.workers.webdav.renameFile import RenameFile
+from lib.FileManager.workers.local.copyFromWebDav import CopyFromWebDav
 
 from base.exc import Error
 from lib.FileManager import FM
@@ -243,6 +244,45 @@ class WebdavController(Controller):
                         }))
             p.start()
             return {"error": False}
+        except Exception as e:
+            result = {
+                "error": True,
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            }
+
+            return result
+
+    def action_copy_files(self, login, password, status_id, source, target, paths, overwrite):
+        try:
+            self.logger.info("FM starting subprocess worker copy_files %s %s source=%s target=%", pprint.pformat(status_id),
+                             pprint.pformat(login))
+
+            self.logger.info("source before %s" % source)
+
+            source = byte_to_unicode_dict(source)
+            target = byte_to_unicode_dict(target)
+
+            self.logger.info("source after %s" % source)
+
+            params = {
+                "login": login.decode('UTF-8'),
+                "password": password.decode('UTF-8'),
+                "source": source,
+                "target": target,
+                "paths": byte_to_unicode_list(paths),
+                "overwrite": overwrite
+            }
+
+            if source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.HOME:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, CopyFromWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            else:
+                raise Exception("Unable to get worker for these source and target")
+
+            p.start()
+            return {"error": False}
+
         except Exception as e:
             result = {
                 "error": True,
