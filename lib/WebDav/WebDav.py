@@ -121,7 +121,7 @@ class WebDav:
             "ext": ext,
             "path": file_dir,
             "owner": self.user,
-            "mode": self.getmode(info),
+            "mode": "600",
             "size": info['size'] if not is_dir else 0,
             "mtime": mtime,
             'mtime_str': str(mtime),
@@ -175,13 +175,6 @@ class WebDav:
 
     def isfile(self, path):
         return not self.webdavClient.is_dir(self.to_byte(path))
-
-    def getmode(self, info):
-        try:
-            return 'my mode'
-        except Exception as e:
-            self.logger.error("Error in WebDav getmode(): %s, traceback = %s" % (str(e), traceback.format_exc()))
-            raise Exception
 
     def list(self, path):
         flist = {

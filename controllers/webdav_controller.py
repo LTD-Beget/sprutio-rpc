@@ -9,6 +9,7 @@ from lib.FileManager.workers.webdav.listFiles import ListFiles
 from lib.FileManager.workers.webdav.makeDir import MakeDir
 from lib.FileManager.workers.webdav.removeFiles import RemoveFiles
 from lib.FileManager.workers.webdav.downloadFiles import DownloadFiles
+from lib.FileManager.workers.webdav.uploadFile import UploadFile
 from lib.FileManager.workers.webdav.renameFile import RenameFile
 from lib.FileManager.workers.local.copyFromWebDav import CopyFromWebDav
 from lib.FileManager.workers.local.moveFromWebDav import MoveFromWebDav
@@ -66,6 +67,17 @@ class WebdavController(Controller):
             "password": password.decode('UTF-8'),
             "paths": byte_to_unicode_list(paths),
             "mode": mode.decode('UTF-8'),
+            "session": byte_to_unicode_dict(session)
+        }, timeout=7200)
+
+    def action_upload_file(self, login, password, path, file_path, overwrite, session):
+
+        return self.get_process_data(UploadFile, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "path": path.decode('UTF-8'),
+            "file_path": file_path.decode('UTF-8'),
+            "overwrite": overwrite,
             "session": byte_to_unicode_dict(session)
         }, timeout=7200)
 
