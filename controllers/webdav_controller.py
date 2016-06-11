@@ -12,6 +12,7 @@ from lib.FileManager.workers.webdav.downloadFiles import DownloadFiles
 from lib.FileManager.workers.webdav.uploadFile import UploadFile
 from lib.FileManager.workers.webdav.renameFile import RenameFile
 from lib.FileManager.workers.webdav.readImages import ReadImages
+from lib.FileManager.workers.webdav.readFile import ReadFile
 from lib.FileManager.workers.local.copyFromWebDav import CopyFromWebDav
 from lib.FileManager.workers.local.moveFromWebDav import MoveFromWebDav
 
@@ -48,6 +49,15 @@ class WebdavController(Controller):
             "password": password.decode('UTF-8'),
             "source_path": source_path.decode("UTF-8"),
             "target_path": target_path.decode("UTF-8"),
+            "session": byte_to_unicode_dict(session)
+        })
+
+    def action_read_file(self, login, password, path, session):
+
+        return self.get_process_data(ReadFile, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "path": path.decode("UTF-8"),
             "session": byte_to_unicode_dict(session)
         })
 
