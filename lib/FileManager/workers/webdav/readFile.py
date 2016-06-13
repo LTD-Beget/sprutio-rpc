@@ -29,7 +29,7 @@ class ReadFile(BaseWorkerCustomer):
             webdav_path = self.webdav.path(self.path)
 
             hash_str = self.random_hash()
-            download_path = TMP_DIR + '/files/' + self.login + '/' + hash_str + '/'
+            download_path = TMP_DIR + '/' + self.login + '/' + hash_str + '/'
 
             download_result = self.download_file_from_webdav(webdav_path, download_path)
 

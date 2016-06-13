@@ -8,7 +8,14 @@ import traceback
 import webdav.client as wc
 import webdav.urn as urn
 import datetime
+import time
+import psutil
+import signal
+from misc.helpers import kill
+from multiprocessing import Process, JoinableQueue, Queue
+from lib.FileManager.FM import REQUEST_DELAY
 
+TIMEOUT_LIMIT = 10
 
 def transfer_from_ftp_to_webdav(source_ftp, target_webdav, source_path, target_path):
     """
@@ -55,6 +62,8 @@ class WebDavSession(ftplib.FTP):
 
 
 class WebDav:
+    NUM_WORKING_PROCESSES = 5
+
     def __init__(self, host, user, passwd, timeout=-999, logger=None):
         self.fp = dict()
 
@@ -64,6 +73,13 @@ class WebDav:
         self.host = host
         self.user = user
         self.passwd = passwd
+        self.processes = []
+        self.file_queue = JoinableQueue(maxsize=0)
+        self.result_queue = Queue(maxsize=0)
+
+        self.is_alive = {
+            "status": True
+        }
 
         options = {
             'webdav_hostname': self.webdav_host,
@@ -72,7 +88,6 @@ class WebDav:
         }
 
         self.webdavClient = wc.Client(options)
-        self.resource = urn.Urn('/', True)
 
         self.logger = logger
         self._tzinfo = TimeZoneMSK()
@@ -83,15 +98,11 @@ class WebDav:
     def path(self, path):
         return urn.Urn(path).path()
 
-    def getcwd(self):
-        return self.resource.parent()
-
     def close(self):
         pass
         #self.webdav
 
-    def _make_file_info(self, file_path):
-
+    def generate_file_info(self, file_path):
         info = self.webdavClient.info(file_path)
 
         is_dir = False
@@ -126,8 +137,28 @@ class WebDav:
             "mtime": mtime,
             'mtime_str': str(mtime),
         }
-
         return file_info
+
+    def _make_file_info(self, file_queue, result_queue, logger, timeout):
+        while int(time.time()) < timeout:
+            if file_queue.empty() is not True:
+                file_path = file_queue.get()
+                try:
+                    file_info = self.generate_file_info(file_path)
+                    result_queue.put(file_info)
+                except UnicodeDecodeError as unicode_e:
+                    logger.error(
+                        "UnicodeDecodeError %s, %s" % (str(unicode_e), traceback.format_exc()))
+
+                except IOError as io_e:
+                    logger.error("IOError %s, %s" % (str(io_e), traceback.format_exc()))
+
+                except Exception as other_e:
+                    logger.error("Exception %s, %s" % (str(other_e), traceback.format_exc()))
+                finally:
+                    file_queue.task_done()
+            else:
+                time.sleep(REQUEST_DELAY)
 
     @staticmethod
     def to_byte(value):
@@ -183,10 +214,62 @@ class WebDav:
         }
 
         listdir = self.webdavClient.list(self.to_byte(path))
+        self.logger.info("listdir=%s", listdir)
+
+        start_time = time.time()
+        time_limit = int(time.time()) + TIMEOUT_LIMIT
+
+        self.file_queue = JoinableQueue(maxsize=0)
+        self.result_queue = Queue(maxsize=0)
+
+        for i in range(self.NUM_WORKING_PROCESSES):
+            p = Process(target=self._make_file_info, args=(self.file_queue, self.result_queue, self.logger, time_limit))
+            p.start()
+            proc = psutil.Process(p.pid)
+            proc.ionice(psutil.IOPRIO_CLASS_IDLE)
+            proc.nice(20)
+            self.logger.debug(
+                    "ListDir worker #%s, set ionice = idle and nice = 20 for pid %s" % (
+                        str(i), str(p.pid)))
+            self.processes.append(p)
 
         for name in listdir:
-            item_path = '{0}/{1}'.format(path, name)
-            flist["items"].append(self._make_file_info(item_path))
+            try:
+                item_path = '{0}/{1}'.format(path, name)
+                self.file_queue.put(item_path)
+            except UnicodeDecodeError as e:
+                self.logger.error(
+                    "UnicodeDecodeError %s, %s" % (str(e), traceback.format_exc()))
+
+            except IOError as e:
+                self.logger.error("IOError %s, %s" % (str(e), traceback.format_exc()))
+
+            except Exception as e:
+                self.logger.error(
+                    "Exception %s, %s" % (str(e), traceback.format_exc()))
+
+        while int(time.time()) <= time_limit:
+            self.logger.debug("file_queue size = %s , empty = %s (timeout: %s/%s)" % (
+                self.file_queue.qsize(), self.file_queue.empty(), str(int(time.time())), time_limit))
+            if self.file_queue.empty():
+                self.logger.debug("join() file_queue until workers done jobs")
+                self.file_queue.join()
+                break
+            else:
+                time.sleep(REQUEST_DELAY)
+
+        for p in self.processes:
+            try:
+                self.logger.debug("WebDav ListDir terminate worker process, pid = %s" % p.pid)
+                kill(p.pid, signal.SIGKILL, self.logger)
+            except OSError:
+                self.logger.error(
+                    "ListDir unable to terminate worker process, pid = %s" % p.pid)
+
+        if self.is_alive['status'] is True:
+            while not self.result_queue.empty():
+                file_info = self.result_queue.get()
+                flist["items"].append(file_info)
 
         return flist
 
