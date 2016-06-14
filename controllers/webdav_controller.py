@@ -13,6 +13,7 @@ from lib.FileManager.workers.webdav.uploadFile import UploadFile
 from lib.FileManager.workers.webdav.renameFile import RenameFile
 from lib.FileManager.workers.webdav.readImages import ReadImages
 from lib.FileManager.workers.webdav.readFile import ReadFile
+from lib.FileManager.workers.webdav.writeFile import WriteFile
 from lib.FileManager.workers.local.copyFromWebDav import CopyFromWebDav
 from lib.FileManager.workers.local.moveFromWebDav import MoveFromWebDav
 
@@ -262,6 +263,16 @@ class WebdavController(Controller):
             }
 
             async_on_error(status_id, result)
+
+    def action_write_file(self, login, password, path, content, encoding, session):
+        return self.get_process_data(WriteFile, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "path": path.decode("UTF-8"),
+            "content": content.decode('UTF-8'),
+            "encoding": encoding.decode('UTF-8'),
+            "session": byte_to_unicode_dict(session)
+        })
 
     def action_remove_files(self, login, password, status_id, paths, session):
         try:
