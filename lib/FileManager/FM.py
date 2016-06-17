@@ -89,3 +89,4 @@ class Action(object):
 class Module(object):
     HOME = "home"
     PUBLIC_FTP = "public_ftp"
+    SFTP = "sftp"

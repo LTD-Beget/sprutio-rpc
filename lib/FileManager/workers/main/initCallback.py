@@ -17,7 +17,7 @@ class InitCallback(BaseWorkerCustomer):
                         "login": self.login,
                         "server": "localhost"
                     },
-                    "ftp_connections": self.get_ftp_connections(),
+                    "connections": self.get_connections(),
                 },
                 "error": False,
                 "message": None,
@@ -34,7 +34,7 @@ class InitCallback(BaseWorkerCustomer):
 
             self.on_error(result)
 
-    def get_ftp_connections(self):
+    def get_connections(self):
         db = sqlite3.connect(DB_FILE)
         db.execute("PRAGMA journal_mode=MEMORY")
         print("Database created and opened successfully file = %s" % DB_FILE)
@@ -42,18 +42,32 @@ class InitCallback(BaseWorkerCustomer):
         cursor = db.cursor()
 
         try:
+            connections = []
+
             cursor.execute("SELECT * FROM ftp_servers WHERE fm_login = ?", (self.login,))
             results = cursor.fetchall()
-
-            connections = []
             for result in results:
                 connections.append({
                     'id': result[0],
                     'host': result[2],
                     'port': result[3],
                     'user': result[4],
-                    'decryptedPassword': result[5]
+                    'decryptedPassword': result[5],
+                    'type': 'ftp'
                 })
+
+            cursor.execute("SELECT * FROM sftp_servers WHERE fm_login = ?", (self.login,))
+            results = cursor.fetchall()
+            for result in results:
+                connections.append({
+                    'id': result[0],
+                    'host': result[2],
+                    'port': result[3],
+                    'user': result[4],
+                    'decryptedPassword': result[5],
+                    'type': 'sftp'
+                })
+
             return connections
         except Exception as e:
             raise e

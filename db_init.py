@@ -24,8 +24,17 @@ else:
                             user        TEXT,
                             password    TEXT
                           );''')
+        cursor.execute('''CREATE TABLE sftp_servers (
+                            id          INTEGER PRIMARY KEY NOT NULL,
+                            fm_login    TEXT,
+                            host        TEXT,
+                            port        INTEGER,
+                            user        TEXT,
+                            password    TEXT
+                          );''')
 
         cursor.execute('''CREATE INDEX ftp_servers_fm_login ON ftp_servers (fm_login);''')
+        cursor.execute('''CREATE INDEX sftp_servers_fm_login ON sftp_servers (fm_login);''')
 
         cursor.execute('''CREATE TABLE editor_settings (
                             id                        INTEGER PRIMARY KEY NOT NULL,

@@ -12,7 +12,6 @@ class UploadFile(BaseWorkerCustomer):
         self.file_path = file_path
         self.overwrite = overwrite
 
-
     def _prepare(self):
         if os.path.islink(self.file_path):
             raise Exception('Symlinks are not allowed!')
@@ -28,7 +27,6 @@ class UploadFile(BaseWorkerCustomer):
                     os.lchown(item, pw.pw_uid, pw.pw_gid)
         else:
             os.lchown(self.file_path, pw.pw_uid, pw.pw_gid)
-
 
     def run(self):
         try:

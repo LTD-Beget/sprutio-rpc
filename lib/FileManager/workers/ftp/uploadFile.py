@@ -35,10 +35,6 @@ class UploadFile(BaseWorkerCustomer):
                         "Upload error")
                 os.remove(self.file_path)
             elif self.overwrite and ftp.path.isdir(target_file):
-                """
-                See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                In case copy file when destination is dir
-                """
                 ftp.remove(target_file)
                 upload_result = ftp.upload(self.file_path, self.path)
                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
