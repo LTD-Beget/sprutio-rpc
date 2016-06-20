@@ -17,7 +17,7 @@ from lib.FileManager.FM import REQUEST_DELAY
 
 TIMEOUT_LIMIT = 10
 
-def transfer_from_ftp_to_webdav(source_ftp, target_webdav, source_path, target_path):
+def transfer_from_webdav_to_webdav(source_ftp, target_webdav, source_path, target_path):
     """
     Копирует файл между WebDav соединенеиями
     :param FTP source_ftp:
@@ -399,6 +399,194 @@ class WebDav:
         except Exception as e:
             self.logger.error("Error in WebDav download(): %s, traceback = %s" % (str(e), traceback.format_exc()))
 
+            file_list['succeed'] = succeed
+            file_list['failed'] = failed
+
+            result['success'] = False
+            result['error'] = e
+            result['file_list'] = file_list
+
+            return result
+
+    def copy_file(self, source, target, overwrite=False, rename=None, callback=None):
+        result = {}
+        file_list = {}
+
+        succeed = []
+        failed = []
+
+        try:
+            if self.isfile(source):
+                if rename is not None:
+                    destination = os.path.join(target, os.path.basename(rename))
+                else:
+                    destination = os.path.join(target, os.path.basename(source))
+
+                if not overwrite and self.exists(destination):
+                    failed.append(source)
+                    raise Exception('file exist and cannot be overwritten')
+                try:
+                    source_file = self.webdavClient.open(self.to_byte(source), "rb")
+
+                except Exception as e:
+                    failed.append(source)
+                    raise Exception('Cannot open source file %s' % (str(e),))
+
+                try:
+                    destination_file = self.ftp.open(self.to_byte(destination), "wb")
+
+                except Exception as e:
+                    failed.append(source)
+                    raise Exception('Cannot open destination file %s' % (str(e)))
+
+                try:
+                    self.ftp.copyfileobj(source_file, destination_file, callback=callback)
+
+                except Exception as e:
+                    failed.append(source)
+                    raise Exception('Cannot copy file %s' % (e,))
+
+                succeed.append(source)
+
+                source_file.close()
+                destination_file.close()
+
+                file_list['succeed'] = succeed
+                file_list['failed'] = failed
+
+                result['success'] = True
+                result['error'] = None
+                result['file_list'] = file_list
+
+                return result
+            else:
+
+                failed.append(source)
+                raise Exception('This is not file')
+
+        except Exception as e:
+            file_list['succeed'] = succeed
+            file_list['failed'] = failed
+
+            result['success'] = False
+            result['error'] = e
+            result['file_list'] = file_list
+
+            return result
+
+    def copy_dir(self, source, target, overwrite=False, rename=None):
+        result = {}
+        file_list = {}
+
+        succeed = []
+        failed = []
+
+        target_name = os.path.basename(rename) if rename is not None else os.path.basename(source)
+
+        try:
+            if self.isdir(self.to_byte(source)):
+                tree = self.ftp.walk(self.to_byte(source))
+                first_level = True
+
+                for current, dirs, files in tree:
+                    dirs_succeed = []
+                    dirs_failed = []
+
+                    files_suceed = []
+                    files_failed = []
+
+                    current = current.encode("ISO-8859-1").decode('utf-8', errors='replace')
+                    relative_root = os.path.relpath(current, source)
+
+                    try:
+                        if first_level:
+                            destination = os.path.join(target, target_name)
+                            first_level = False
+
+                            if not self.exists(destination):
+                                self.mkdir(destination)
+                            elif not overwrite and self.exists(destination):
+                                failed.append(source)
+                                raise Exception("Directory already exists and overwrite not permitted")
+
+                        for f in files:
+                            f = f.encode("ISO-8859-1").decode('utf-8', errors='replace')
+                            source_filename = os.path.join(current, f)
+                            source_file = self.ftp.open(self.to_byte(source_filename), "rb")
+
+                            dest_filename = os.path.abspath(
+                                    self.ftp.path.join(os.path.join(target, target_name), relative_root, f))
+
+                            try:
+                                if not overwrite and self.ftp.path.exists(dest_filename):
+                                    raise Exception("File already exists and overwrite not permitted")
+
+                                dest_file = self.ftp.open(self.to_byte(dest_filename), "wb")
+                                self.ftp.copyfileobj(source_file, dest_file)
+
+                                source_file.close()
+                                dest_file.close()
+
+                                files_suceed.append(source_filename)
+
+                            except Exception as e:
+                                files_failed.append(source_filename)
+                                self.logger.error(
+                                        "Error in FTP copy_dir(): %s, traceback = %s" % (
+                                            str(e), traceback.format_exc()))
+
+                        for d in dirs:
+                            d = d.encode("ISO-8859-1").decode('utf-8', errors='replace')
+                            source_dirname = os.path.join(current, d)
+                            dest_dirname = os.path.abspath(
+                                    self.ftp.path.join(os.path.join(target, target_name), relative_root, d))
+
+                            try:
+                                if not overwrite and self.exists(dest_dirname):
+                                    raise Exception("Directory already exists and overwrite not permitted")
+
+                                if not self.exists(dest_dirname):
+                                    self.mkdir(dest_dirname)
+
+                                dirs_succeed.append(source_dirname)
+
+                            except Exception as e:
+                                dirs_failed.append(source_dirname)
+                                self.logger.error(
+                                        "Error in FTP copy_dir(): %s, traceback = %s" % (
+                                            str(e), traceback.format_exc()))
+
+                        succeed.extend(files_suceed)
+                        succeed.extend(dirs_succeed)
+                        failed.extend(files_failed)
+                        failed.extend(dirs_failed)
+
+                    except Exception as e:
+                        succeed.extend(files_suceed)
+                        succeed.extend(dirs_succeed)
+                        failed.extend(files_failed)
+                        failed.extend(dirs_failed)
+                        self.logger.error(
+                                "Error in FTP copy_dir(): %s, traceback = %s" % (str(e), traceback.format_exc()))
+
+                # after for statement
+                file_list['succeed'] = succeed
+                file_list['failed'] = failed
+
+                if len(failed) == 0:
+                    result['success'] = True
+                else:
+                    result['success'] = False
+
+                result['file_list'] = file_list
+
+                return result
+
+            else:
+                failed.append(source)
+                raise Exception('This is not dir')
+
+        except Exception as e:
             file_list['succeed'] = succeed
             file_list['failed'] = failed
 

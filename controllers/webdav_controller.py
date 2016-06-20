@@ -14,6 +14,8 @@ from lib.FileManager.workers.webdav.renameFile import RenameFile
 from lib.FileManager.workers.webdav.readImages import ReadImages
 from lib.FileManager.workers.webdav.readFile import ReadFile
 from lib.FileManager.workers.webdav.writeFile import WriteFile
+from lib.FileManager.workers.webdav.copyWebDav import CopyWebDav
+from lib.FileManager.workers.webdav.createCopy import CreateCopy
 from lib.FileManager.workers.local.copyFromWebDav import CopyFromWebDav
 from lib.FileManager.workers.local.moveFromWebDav import MoveFromWebDav
 
@@ -321,6 +323,10 @@ class WebdavController(Controller):
             if source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
+                        source.get('server_id') == target.get('server_id')):
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, CopyWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
             else:
                 raise Exception("Unable to get worker for these source and target")
 
@@ -358,6 +364,31 @@ class WebdavController(Controller):
                             args=(self.logger, MoveFromWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             else:
                 raise Exception("Unable to get worker for these source and target")
+
+            p.start()
+            return {"error": False}
+
+        except Exception as e:
+            result = {
+                "error": True,
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            }
+
+            return result
+
+    def action_create_copy(self, login, password, status_id, paths, session):
+        try:
+            self.logger.info("FM starting subprocess worker create_copy %s %s", pprint.pformat(status_id),
+                             pprint.pformat(login))
+
+            p = Process(target=self.run_subprocess,
+                        args=(self.logger, CreateCopy, status_id.decode('UTF-8'), FM.Action.CREATE_COPY, {
+                            "login": login.decode('UTF-8'),
+                            "password": password.decode('UTF-8'),
+                            "paths": byte_to_unicode_list(paths),
+                            "session": byte_to_unicode_dict(session)
+                        }))
 
             p.start()
             return {"error": False}
