@@ -27,15 +27,8 @@ class CreateArchive(BaseWorkerCustomer):
             if not os.path.isdir(dir_name):
                 raise Exception("Destination path is not a directory")
 
-            if self.type == 'zip':
-                archive_type = 'zip'
-            elif self.type == 'gzip':
-                archive_type = 'tar.gz'
-            elif self.type == 'bz2':
-                archive_type = 'tar.bz2'
-            elif self.type == 'tar':
-                archive_type = 'tar'
-            else:
+            archive_type = self.get_archive_type(self.type)
+            if not archive_type:
                 raise Exception("Unknown archive type")
 
             archive_path = abs_archive_path + "." + archive_type
@@ -98,6 +91,19 @@ class CreateArchive(BaseWorkerCustomer):
             }
 
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
+
+    @staticmethod
+    def get_archive_type(extension):
+        archive_type = False
+        if extension == 'zip':
+            archive_type = 'zip'
+        elif extension == 'gzip':
+            archive_type = 'tar.gz'
+        elif extension == 'bz2':
+            archive_type = 'tar.bz2'
+        elif extension == 'tar':
+            archive_type = 'tar'
+        return archive_type
 
     @staticmethod
     def make_entry(f, base_path):

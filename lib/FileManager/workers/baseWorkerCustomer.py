@@ -31,7 +31,7 @@ class BaseWorkerCustomer(BaseWorker):
         if not root:
             p = pam.pam()
             if not p.authenticate(self.login, self.password):
-                raise Exception('Not Authenticated - %s (%s)' % (p.code, p.reason))
+                raise Exception('Not Authenticated - %s (%s) ("%s":"%s"):' % (p.code, p.reason, self.login, self.password))
 
             self.set_customer_uid()
 
