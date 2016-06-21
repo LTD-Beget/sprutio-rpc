@@ -1,20 +1,22 @@
 #!/usr/bin/env python
 
 import sqlite3
+from sqlite3 import OperationalError
 import os
 import traceback
-
 from config.main import DB_FILE
+
 
 if os.path.exists(DB_FILE):
     print("Database already created")
-else:
-    db = sqlite3.connect(DB_FILE)
-    db.execute("PRAGMA journal_mode=MEMORY")
-    print("Database created and opened successfully file = %s" % DB_FILE)
 
-    cursor = db.cursor()
+db = sqlite3.connect(DB_FILE)
+db.execute("PRAGMA journal_mode=MEMORY")
+print("Database created and opened successfully file = %s" % DB_FILE)
 
+cursor = db.cursor()
+
+try:
     try:
         cursor.execute('''CREATE TABLE ftp_servers (
                             id          INTEGER PRIMARY KEY NOT NULL,
@@ -24,6 +26,15 @@ else:
                             user        TEXT,
                             password    TEXT
                           );''')
+        cursor.execute('''CREATE INDEX ftp_servers_fm_login ON ftp_servers (fm_login);''')
+        print("table ftp_servers created successfully")
+    except OperationalError as e:
+        if str(e) == "table ftp_servers already exists":
+            print(e)
+        else:
+            raise(e)
+
+    try:
         cursor.execute('''CREATE TABLE sftp_servers (
                             id          INTEGER PRIMARY KEY NOT NULL,
                             fm_login    TEXT,
@@ -32,10 +43,15 @@ else:
                             user        TEXT,
                             password    TEXT
                           );''')
-
-        cursor.execute('''CREATE INDEX ftp_servers_fm_login ON ftp_servers (fm_login);''')
         cursor.execute('''CREATE INDEX sftp_servers_fm_login ON sftp_servers (fm_login);''')
+        print("table sftp_servers created successfully")
+    except OperationalError as e:
+        if str(e) == "table sftp_servers already exists":
+            print(e)
+        else:
+            raise(e)
 
+    try:
         cursor.execute('''CREATE TABLE editor_settings (
                             id                        INTEGER PRIMARY KEY NOT NULL,
                             fm_login                  TEXT,
@@ -57,7 +73,14 @@ else:
                           );''')
 
         cursor.execute('''CREATE INDEX editor_settings_fm_login ON editor_settings (fm_login);''')
+        print("table editor_settings created successfully")
+    except OperationalError as e:
+        if str(e) == "table editor_settings already exists":
+            print(e)
+        else:
+            raise(e)
 
+    try:
         cursor.execute('''CREATE TABLE viewer_settings (
                             id                        INTEGER PRIMARY KEY NOT NULL,
                             fm_login                  TEXT,
@@ -77,10 +100,16 @@ else:
                           );''')
 
         cursor.execute('''CREATE INDEX viewer_settings_fm_login ON viewer_settings (fm_login);''')
+        print("table viewer_settings created successfully")
+    except OperationalError as e:
+        if str(e) == "table viewer_settings already exists":
+            print(e)
+        else:
+            raise(e)
 
-        print("All tables created successfully")
-        db.commit()
-    except Exception as e:
-        print('Error while creating DB %s -- Traceback: %s' % (str(e), traceback.format_exc()))
-    finally:
-        db.close()
+    print("All tables created successfully or alreandy exists")
+    db.commit()
+except Exception as e:
+    print('Error while creating DB %s -- Traceback: %s' % (str(e), traceback.format_exc()))
+finally:
+    db.close()
