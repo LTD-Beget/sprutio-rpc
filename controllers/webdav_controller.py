@@ -16,8 +16,8 @@ from lib.FileManager.workers.webdav.readFile import ReadFile
 from lib.FileManager.workers.webdav.writeFile import WriteFile
 from lib.FileManager.workers.webdav.copyWebDav import CopyWebDav
 from lib.FileManager.workers.webdav.createCopy import CreateCopy
-from lib.FileManager.workers.local.copyFromWebDav import CopyFromWebDav
-from lib.FileManager.workers.local.moveFromWebDav import MoveFromWebDav
+from lib.FileManager.workers.webdav.copyFromWebDav import CopyFromWebDav
+from lib.FileManager.workers.webdav.moveFromWebDav import MoveFromWebDav
 
 from base.exc import Error
 from lib.FileManager import FM
