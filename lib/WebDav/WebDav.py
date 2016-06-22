@@ -297,16 +297,12 @@ class WebDav:
         self.webdavClient.move(source, target)
 
     def remove(self, target):
-        byte_target = self.to_byte(target)
-
         try:
-            self.webdavClient.clean(byte_target)
+            self.logger.info("removing target=%s" % target)
+            self.webdavClient.clean(target)
         except Exception as e:
             self.logger.error("Error in WebDav dir remove(): %s, traceback = %s" % (str(e), traceback.format_exc()))
             raise Exception
-
-    def file(self, target, mode):
-        return self.webdavClient.open(self.to_byte(target), mode)
 
     def mkdir(self, path):
         return self.webdavClient.mkdir(self.to_byte(path))
@@ -373,7 +369,7 @@ class WebDav:
             target_path = os.path.join(target, os.path.basename(source))
 
             try:
-                self.webdavClient.download(self.to_byte(source), target_path)
+                self.webdavClient.download(source, target_path)
             except Exception as e:
                 failed.append(source)
                 self.logger.error("Error in WebDav download(): %s, traceback = %s" % (str(e), traceback.format_exc()))
@@ -442,124 +438,45 @@ class WebDav:
 
             return result
 
-    def copy_dir(self, source, target, overwrite=False, rename=None):
-        result = {}
-        file_list = {}
+    def copy_directory_recusively(self, source, destination, overwrite):
+        success_paths = []
+        error_paths = []
+        self.make_destination_dir(destination, overwrite)
+        list_dir = self.listdir(source)
+        if len(list_dir) == 0:
+            success_paths.append(destination)
+            return success_paths, error_paths
 
-        succeed = []
-        failed = []
-
-        target_name = os.path.basename(rename) if rename is not None else os.path.basename(source)
-
-        try:
-            if self.isdir(self.to_byte(source)):
-                tree = self.ftp.walk(self.to_byte(source))
-                first_level = True
-
-                for current, dirs, files in tree:
-                    dirs_succeed = []
-                    dirs_failed = []
-
-                    files_suceed = []
-                    files_failed = []
-
-                    current = current.encode("ISO-8859-1").decode('utf-8', errors='replace')
-                    relative_root = os.path.relpath(current, source)
-
-                    try:
-                        if first_level:
-                            destination = os.path.join(target, target_name)
-                            first_level = False
-
-                            if not self.exists(destination):
-                                self.mkdir(destination)
-                            elif not overwrite and self.exists(destination):
-                                failed.append(source)
-                                raise Exception("Directory already exists and overwrite not permitted")
-
-                        for f in files:
-                            f = f.encode("ISO-8859-1").decode('utf-8', errors='replace')
-                            source_filename = os.path.join(current, f)
-                            source_file = self.ftp.open(self.to_byte(source_filename), "rb")
-
-                            dest_filename = os.path.abspath(
-                                    self.ftp.path.join(os.path.join(target, target_name), relative_root, f))
-
-                            try:
-                                if not overwrite and self.ftp.path.exists(dest_filename):
-                                    raise Exception("File already exists and overwrite not permitted")
-
-                                dest_file = self.ftp.open(self.to_byte(dest_filename), "wb")
-                                self.ftp.copyfileobj(source_file, dest_file)
-
-                                source_file.close()
-                                dest_file.close()
-
-                                files_suceed.append(source_filename)
-
-                            except Exception as e:
-                                files_failed.append(source_filename)
-                                self.logger.error(
-                                        "Error in FTP copy_dir(): %s, traceback = %s" % (
-                                            str(e), traceback.format_exc()))
-
-                        for d in dirs:
-                            d = d.encode("ISO-8859-1").decode('utf-8', errors='replace')
-                            source_dirname = os.path.join(current, d)
-                            dest_dirname = os.path.abspath(
-                                    self.ftp.path.join(os.path.join(target, target_name), relative_root, d))
-
-                            try:
-                                if not overwrite and self.exists(dest_dirname):
-                                    raise Exception("Directory already exists and overwrite not permitted")
-
-                                if not self.exists(dest_dirname):
-                                    self.mkdir(dest_dirname)
-
-                                dirs_succeed.append(source_dirname)
-
-                            except Exception as e:
-                                dirs_failed.append(source_dirname)
-                                self.logger.error(
-                                        "Error in FTP copy_dir(): %s, traceback = %s" % (
-                                            str(e), traceback.format_exc()))
-
-                        succeed.extend(files_suceed)
-                        succeed.extend(dirs_succeed)
-                        failed.extend(files_failed)
-                        failed.extend(dirs_failed)
-
-                    except Exception as e:
-                        succeed.extend(files_suceed)
-                        succeed.extend(dirs_succeed)
-                        failed.extend(files_failed)
-                        failed.extend(dirs_failed)
-                        self.logger.error(
-                                "Error in FTP copy_dir(): %s, traceback = %s" % (str(e), traceback.format_exc()))
-
-                # after for statement
-                file_list['succeed'] = succeed
-                file_list['failed'] = failed
-
-                if len(failed) == 0:
-                    result['success'] = True
+        for filename in list_dir:
+            try:
+                copy_result = {}
+                if self.isdir(filename):
+                    new_filename = filename.replace(source, "")
+                    new_source = source + new_filename
+                    new_destination = destination + new_filename
+                    copy_success_path, copy_error_path = self.copy_directory_recusively(new_source, new_destination, overwrite)
+                    if len(copy_error_path) == 0:
+                        copy_result['success'] = True
                 else:
-                    result['success'] = False
+                    new_destination = destination + filename.replace(source, "")
+                    copy_result = self.copy_file(filename, self.path(new_destination), overwrite=True)
 
-                result['file_list'] = file_list
+                if copy_result['success']:
+                    success_paths.append(filename)
+            except Exception as e:
+                error_paths.append(filename)
+                self.logger.info("Error=%s" % str(e))
 
-                return result
+        return success_paths, error_paths
 
-            else:
-                failed.append(source)
-                raise Exception('This is not dir')
-
-        except Exception as e:
-            file_list['succeed'] = succeed
-            file_list['failed'] = failed
-
-            result['success'] = False
-            result['error'] = e
-            result['file_list'] = file_list
-
-            return result
+    def make_destination_dir(self, destination, overwrite):
+        self.logger.info("making destination %s" % destination)
+        if not self.exists(destination):
+            self.mkdir(destination)
+        elif overwrite and self.exists(destination) and not self.isdir(destination):
+            self.remove(destination)
+            self.mkdir(destination)
+        elif not overwrite and self.exists(destination) and not self.isdir(destination):
+            raise Exception("destination is not a dir")
+        else:
+            pass

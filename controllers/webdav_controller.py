@@ -18,6 +18,7 @@ from lib.FileManager.workers.webdav.copyWebDav import CopyWebDav
 from lib.FileManager.workers.webdav.createCopy import CreateCopy
 from lib.FileManager.workers.webdav.copyFromWebDav import CopyFromWebDav
 from lib.FileManager.workers.webdav.moveFromWebDav import MoveFromWebDav
+from lib.FileManager.workers.webdav.moveWebDav import MoveWebDav
 
 from base.exc import Error
 from lib.FileManager import FM
@@ -362,6 +363,10 @@ class WebdavController(Controller):
             if source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
+                        source.get('server_id') == target.get('server_id')):
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, MoveWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             else:
                 raise Exception("Unable to get worker for these source and target")
 
