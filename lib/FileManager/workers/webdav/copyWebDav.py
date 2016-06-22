@@ -58,7 +58,7 @@ class CopyWebDav(BaseWorkerCustomer):
 
                         operation_progress["processed"] += 1
 
-                        for file in self.webdav.listDir(abs_path):
+                        for file in self.webdav.listdir(abs_path):
                             current = current.encode("ISO-8859-1").decode("UTF-8")
                             relative_root = source_path + '/' + current
                             if self.webdav.isdir(file):

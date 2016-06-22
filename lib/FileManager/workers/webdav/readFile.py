@@ -34,7 +34,7 @@ class ReadFile(BaseWorkerCustomer):
             download_result = self.download_file_from_webdav(webdav_path, download_path)
 
             if download_result["success"]:
-                read_path = (download_path + '/' + self.path).replace("/mnt", "")
+                read_path = (download_path + '/' + self.path)
                 if not os.path.exists(read_path):
                     raise OSError("File not downloaded")
 

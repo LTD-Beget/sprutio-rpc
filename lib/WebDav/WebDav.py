@@ -118,9 +118,7 @@ class WebDav:
 
         ext = ''
         divide = file_name.split('.')
-        if is_dir:
-            ext = b''
-        elif len(divide) > 1:
+        if len(divide) > 1:
             ext = file_name.split('.')[-1].lower()
 
         mtime = info['modified']
@@ -274,15 +272,11 @@ class WebDav:
         return flist
 
     def listdir(self, path):
-        byte_path = self.to_byte(path)
-
-        listdir = self.webdavClient.list(byte_path)
+        listdir = self.webdavClient.list(path)
 
         listing = []
         for name in listdir:
-            if isinstance(name, str):
-                name = name.encode("ISO-8859-1")
-            item_path = '{0}/{1}'.format(byte_path, name)
+            item_path = '{0}/{1}'.format(path, name)
             listing.append(item_path)
         return listing
 
@@ -408,7 +402,7 @@ class WebDav:
 
             return result
 
-    def copy_file(self, source, target, overwrite=False, rename=None, callback=None):
+    def copy_file(self, source, target, overwrite=False):
         result = {}
         file_list = {}
 
@@ -416,53 +410,27 @@ class WebDav:
         failed = []
 
         try:
-            if self.isfile(source):
-                if rename is not None:
-                    destination = os.path.join(target, os.path.basename(rename))
-                else:
-                    destination = os.path.join(target, os.path.basename(source))
-
-                if not overwrite and self.exists(destination):
-                    failed.append(source)
-                    raise Exception('file exist and cannot be overwritten')
-                try:
-                    source_file = self.webdavClient.open(self.to_byte(source), "rb")
-
-                except Exception as e:
-                    failed.append(source)
-                    raise Exception('Cannot open source file %s' % (str(e),))
-
-                try:
-                    destination_file = self.ftp.open(self.to_byte(destination), "wb")
-
-                except Exception as e:
-                    failed.append(source)
-                    raise Exception('Cannot open destination file %s' % (str(e)))
-
-                try:
-                    self.ftp.copyfileobj(source_file, destination_file, callback=callback)
-
-                except Exception as e:
-                    failed.append(source)
-                    raise Exception('Cannot copy file %s' % (e,))
-
-                succeed.append(source)
-
-                source_file.close()
-                destination_file.close()
-
-                file_list['succeed'] = succeed
-                file_list['failed'] = failed
-
-                result['success'] = True
-                result['error'] = None
-                result['file_list'] = file_list
-
-                return result
-            else:
-
+            if not overwrite and self.exists(target):
                 failed.append(source)
-                raise Exception('This is not file')
+                raise Exception('file exist and cannot be overwritten')
+
+            try:
+                self.webdavClient.copy(source, target)
+
+            except Exception as e:
+                failed.append(source)
+                raise Exception('Cannot copy file %s' % (e,))
+
+            succeed.append(source)
+
+            file_list['succeed'] = succeed
+            file_list['failed'] = failed
+
+            result['success'] = True
+            result['error'] = None
+            result['file_list'] = file_list
+
+            return result
 
         except Exception as e:
             file_list['succeed'] = succeed
