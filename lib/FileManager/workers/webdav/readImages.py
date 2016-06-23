@@ -69,9 +69,6 @@ class ReadImages(BaseWorkerCustomer):
         for path in self.paths:
             try:
                 abs_path = self.webdav.path(path)
-                self.logger.info("abs_path=%s" % abs_path)
-                source_path = self.webdav.parent(path)
-                self.logger.info("source_path=%s" % source_path)
 
                 if self.webdav.isfile(abs_path):
                     self.download_file_from_webdav(abs_path, target_path)
@@ -84,19 +81,6 @@ class ReadImages(BaseWorkerCustomer):
                 error_paths.append(path)
 
         return success_paths, error_paths
-
-    def download_directory_recursively(self, abs_path, target_path, source_path):
-        destination = os.path.join(target_path, abs_path)
-
-        if not os.path.exists(destination):
-            os.makedirs(destination)
-        else:
-            raise Exception("destination already exist")
-
-        for filename in self.webdav.list(abs_path):
-            current = filename.encode("ISO-8859-1").decode("UTF-8")
-            relative_root = os.path.relpath(current, source_path)
-            self.logger.info("current=%s, relative_root=%s" % (current, relative_root))
 
     def download_file_from_webdav(self, abs_path, target_path):
         try:

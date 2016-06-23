@@ -34,15 +34,17 @@ class WriteFile(BaseWorkerCustomer):
                 self.logger.error("Error %s , %s" % (str(e), traceback.format_exc()))
                 raise e
 
-            webdav_connection = WebDavConnection.create(self.login, self.session.get('server_id'), self.logger)
+            webdav = WebDavConnection.create(self.login, self.session.get('server_id'), self.logger)
 
             try:
                 hash_str = self.random_hash()
                 temp_dir = os.path.abspath(TMP_DIR + '/' + self.login + '/' + hash_str + '/')
                 os.makedirs(temp_dir)
-                self.logger.info("abs_path=%s, temp_dir=%s" % (abs_path, temp_dir))
-                temp_filename = temp_dir + self.path
-                self.logger.info("temp_filename=%s" % temp_filename)
+                filedir = webdav.parent(self.path)
+                filename = self.path
+                if filedir != '/':
+                    filename = filename.replace(filedir, "/", 1)
+                temp_filename = temp_dir + filename
             except Exception as e:
                 result = WebDavConnection.get_error(e,
                                                  "Unable to make file backup before saving \"%s\"." % os.path.basename(
@@ -54,14 +56,10 @@ class WriteFile(BaseWorkerCustomer):
                 content = decoded.encode(self.encoding)
                 self.create_local_file(temp_filename, content)
 
-                self.logger.info("uploading source=%s, target=%s" % (temp_filename, abs_path))
-                folder = webdav_connection.parent(self.path)
-                webdav_connection.upload(temp_filename, folder, True)
-                self.logger.info("webdav upload succeed")
+                folder = webdav.parent(self.path)
+                webdav.upload(temp_filename, folder, True)
 
-                file_info = webdav_connection.generate_file_info(self.path)
-                self.logger.info("getting file info succeed")
-                self.logger.info("file_info=%s", file_info)
+                file_info = webdav.generate_file_info(self.path)
 
                 shutil.rmtree(temp_dir, True)
 
@@ -81,16 +79,15 @@ class WriteFile(BaseWorkerCustomer):
 
             except Exception as e:
                 try:
-                    webdav_connection.upload(os.path.join(temp_dir, os.path.basename(abs_path)), abs_path, True)
+                    webdav.upload(os.path.join(temp_dir, os.path.basename(abs_path)), abs_path, True)
                 except Exception as e:
-                    webdav_connection.close()
+                    webdav.close()
                     result = WebDavConnection.get_error(e,
                                                      "Unable to upload tmp file during write error \"%s\"."
                                                      % os.path.basename(abs_path))
                     self.on_error(result)
                     return
 
-                webdav_connection.close()
                 result = WebDavConnection.get_error(e, "Unable to write file \"%s\"." % os.path.basename(abs_path))
                 self.on_error(result)
                 return

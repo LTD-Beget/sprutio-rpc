@@ -34,7 +34,11 @@ class ReadFile(BaseWorkerCustomer):
             download_result = self.download_file_from_webdav(webdav_path, download_path)
 
             if download_result["success"]:
-                read_path = (download_path + '/' + self.path)
+                filedir = self.webdav.parent(self.path)
+                filename = self.path
+                if filedir != '/':
+                    filename = filename.replace(filedir, "", 1)
+                read_path = (download_path + '/' + filename)
                 if not os.path.exists(read_path):
                     raise OSError("File not downloaded")
 
@@ -60,7 +64,6 @@ class ReadFile(BaseWorkerCustomer):
                 re_utf8 = re.compile('.*charset\s*=\s*utf\-8.*', re.UNICODE | re.IGNORECASE | re.MULTILINE)
                 html_ext = ['htm', 'html', 'phtml', 'php', 'inc', 'tpl', 'xml']
                 file_ext = os.path.splitext(read_path)[1][1:].strip().lower()
-                self.logger.debug("File ext = %s" % file_ext)
 
                 if confidence > 0.75 and detected != 'windows-1251' and detected != FM.DEFAULT_ENCODING:
                     if detected == "ISO-8859-7":
