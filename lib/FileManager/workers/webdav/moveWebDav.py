@@ -53,12 +53,13 @@ class MoveWebDav(BaseWorkerCustomer):
             for path in self.paths:
                 try:
                     self.logger.info("target_directory=%s" % target_directory)
-                    parent_t_dir = target_directory.strip()
-                    self.logger.info("parent =%s" % parent_t_dir)
-                    if parent_t_dir != '/':
-                        target_path = target_directory + path
+                    replaced_path = path
+                    if source_path != '/':
+                        replaced_path = path.replace(source_path, "", 1)
+                    if target_directory != '/':
+                        target_path = target_directory + replaced_path
                     else:
-                        target_path = path.replace(source_path, "", 1)
+                        target_path = replaced_path
 
                     if webdav.isfile(path):
                         self.logger.info("move file from source_path=%s to target_path=%s" % (path, target_path))

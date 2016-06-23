@@ -49,10 +49,13 @@ class CopyWebDav(BaseWorkerCustomer):
             for path in self.paths:
                 try:
                     self.logger.info("source_path=%s" % source_path)
+                    replaced_path = path
+                    if source_path != '/':
+                        replaced_path = path.replace(source_path, "", 1)
                     if target_directory != '/':
-                        target_path = target_directory + path
+                        target_path = target_directory + replaced_path
                     else:
-                        target_path = path.replace(source_path, "", 1)
+                        target_path = replaced_path
 
                     if webdav.isfile(path):
                         self.logger.info("copy file from source_path=%s to target_path=%s" % (path, target_path))
