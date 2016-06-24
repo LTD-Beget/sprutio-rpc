@@ -299,6 +299,9 @@ class WebDav:
     def remove(self, target):
         try:
             self.logger.info("removing target=%s" % target)
+            if self.isdir(target):
+                target += '/'
+            self.webdavClient.unpublish(target)
             self.webdavClient.clean(target)
         except Exception as e:
             self.logger.error("Error in WebDav dir remove(): %s, traceback = %s" % (str(e), traceback.format_exc()))
@@ -315,18 +318,14 @@ class WebDav:
         failed = []
 
         try:
-            byte_source = self.to_byte(source)
-            target = self.to_byte(target)
-
             if rename is not None:
-                rename = self.to_byte(rename)
-                target_path = os.path.join(target, os.path.basename(rename))
+                target_path = os.path.join(target, rename)
             else:
-                target_path = os.path.join(target, os.path.basename(byte_source))
+                target_path = os.path.join(target, source)
 
             if not overwrite and self.webdavClient.check(target_path):
                 failed.append(source)
-                raise Exception("File already exists and overwrite not permitted")
+                raise Exception("File '%s' already exists and overwrite not permitted" % target_path)
 
             try:
                 self.webdavClient.upload(self.to_string(target_path), source)

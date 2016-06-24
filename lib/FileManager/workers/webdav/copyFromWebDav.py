@@ -94,7 +94,7 @@ class CopyFromWebDav(BaseWorkerCustomer):
     def download_directory_recursively(self, path, target_path, operation_progress):
         file_basename = self.webdav.parent(path)
         self.logger.info("file_basename %s" % file_basename)
-        destination = os.path.join(target_path, file_basename).replace("/mnt", "")
+        destination = os.path.join(target_path, file_basename)
         self.logger.info("downloading directory %s" % destination)
 
         if self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
@@ -109,7 +109,7 @@ class CopyFromWebDav(BaseWorkerCustomer):
 
     def download_file_from_webdav(self, path, target_path, operation_progress):
         try:
-            target_file = target_path.replace("/mnt", "")
+            target_file = target_path
             if not os.path.exists(target_file):
                 download_result = self.webdav.download(path, target_path)
                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
