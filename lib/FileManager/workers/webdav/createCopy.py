@@ -42,6 +42,7 @@ class CreateCopy(BaseWorkerCustomer):
                     if self.webdav.isdir(dir_path):
                         filename = dir_path
                         ext = '/'
+                        dir_path += '/'
                     elif len(divide) > 1:
                         ext = '.' + dir_path.split('.')[-1].lower()
                         filename = dir_path.replace(ext, "")
@@ -68,18 +69,10 @@ class CreateCopy(BaseWorkerCustomer):
                     source_path = copy_path.get('source')
                     target_path = copy_path.get('target')
 
-                    if self.webdav.isfile(source_path):
-                        copy_result = self.webdav.copy_file(source_path, self.webdav.path(target_path), overwrite=True)
-                        if not copy_result['success'] or len(copy_result['file_list']['failed']) > 0:
-                            raise copy_result['error'] if copy_result['error'] is not None else Exception(
-                                "Upload error")
-                    elif self.webdav.isdir(source_path):
-                        copy_success_paths, copy_error_paths = self.copy_directory_recusively(source_path, self.webdav.path(target_path))
-                        if len(copy_error_paths) > 0:
-                            error_paths.append(source_path)
-                    else:
-                        error_paths.append(source_path)
-                        break
+                    copy_result = self.webdav.copy_file(source_path, self.webdav.path(target_path), overwrite=True)
+                    if not copy_result['success'] or len(copy_result['file_list']['failed']) > 0:
+                        raise copy_result['error'] if copy_result['error'] is not None else Exception(
+                            "Upload error")
 
                     success_paths.append(source_path)
                     created_paths.append(self.webdav.generate_file_info(target_path))
@@ -121,45 +114,3 @@ class CreateCopy(BaseWorkerCustomer):
                 "traceback": traceback.format_exc()
             }
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
-
-    def copy_directory_recusively(self, source, destination):
-        success_paths = []
-        error_paths = []
-        self.make_destination_dir(destination)
-        list_dir = self.webdav.listdir(source)
-        if len(list_dir) == 0:
-            success_paths.append(destination)
-            return success_paths, error_paths
-
-        for filename in list_dir:
-            try:
-                copy_result = {}
-                if self.webdav.isdir(filename):
-                    new_filename = filename.replace(source, "")
-                    new_source = source + new_filename
-                    new_destination = destination + new_filename
-                    copy_success_path, copy_error_path = self.copy_directory_recusively(new_source, new_destination)
-                    if len(copy_error_path) == 0:
-                        copy_result['success'] = True
-                else:
-                    new_destination = destination + filename.replace(source, "")
-                    copy_result = self.webdav.copy_file(filename, self.webdav.path(new_destination), overwrite=True)
-
-                if copy_result['success']:
-                    success_paths.append(filename)
-            except Exception as e:
-                error_paths.append(filename)
-                self.logger.info("Error=%s" % str(e))
-
-        return success_paths, error_paths
-
-    def make_destination_dir(self, destination):
-        if not self.webdav.exists(destination):
-            self.webdav.mkdir(destination)
-        elif self.overwrite and self.webdav.exists(destination) and not self.webdav.isdir(destination):
-            self.webdav.remove(destination)
-            self.webdav.mkdir(destination)
-        elif not self.overwrite and self.webdav.exists(destination) and not self.webdav.isdir(destination):
-            raise Exception("destination is not a dir")
-        else:
-            pass

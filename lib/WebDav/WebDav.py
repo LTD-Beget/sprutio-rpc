@@ -298,7 +298,7 @@ class WebDav:
 
     def remove(self, target):
         try:
-            self.logger.info("removing target=%s" % target)
+            self.logger.debug("Removing target=%s" % target)
             if self.isdir(target):
                 target += '/'
             self.webdavClient.unpublish(target)
@@ -308,7 +308,8 @@ class WebDav:
             raise Exception
 
     def mkdir(self, path):
-        return self.webdavClient.mkdir(self.to_byte(path))
+        self.logger.debug("Creating directory=%s" % path)
+        return self.webdavClient.mkdir(path)
 
     def upload(self, source, target, overwrite=False, rename=None, operation_progress=None):
         result = {}
@@ -328,6 +329,7 @@ class WebDav:
                 raise Exception("File '%s' already exists and overwrite not permitted" % target_path)
 
             try:
+                self.logger.debug("Uploading target_path=%s, source=%s" % (target_path, source))
                 self.webdavClient.upload(self.to_string(target_path), source, operation_progress)
             except Exception as e:
                 failed.append(source)
@@ -368,6 +370,7 @@ class WebDav:
             target_path = os.path.join(target, os.path.basename(source))
 
             try:
+                self.logger.debug("Downloading source=%s, target_path=%s" % (source, target_path))
                 self.webdavClient.download(source, target_path)
             except Exception as e:
                 failed.append(source)
@@ -410,6 +413,7 @@ class WebDav:
                 raise Exception('file exist and cannot be overwritten')
 
             try:
+                self.logger.debug("Copying file source=%s, target=%s" % (source, target))
                 self.webdavClient.copy(source, target)
 
             except Exception as e:

@@ -5,11 +5,12 @@ import os
 import traceback
 import threading
 import time
+import shutil
 
 
-class CopyToWebDav(BaseWorkerCustomer):
+class MoveToWebDav(BaseWorkerCustomer):
     def __init__(self, source, target, paths, overwrite, *args, **kwargs):
-        super(CopyToWebDav, self).__init__(*args, **kwargs)
+        super(MoveToWebDav, self).__init__(*args, **kwargs)
 
         self.source = source
         self.target = target
@@ -41,7 +42,7 @@ class CopyToWebDav(BaseWorkerCustomer):
             source_path = self.get_abs_path(source_path)
             webdav = WebDavConnection.create(self.login, self.target.get('server_id'), self.logger)
 
-            self.logger.info("CopyToWebDav process run source = %s , target = %s" % (source_path, target_path))
+            self.logger.info("MoveToWebDav process run source = %s , target = %s" % (source_path, target_path))
 
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
@@ -64,6 +65,15 @@ class CopyToWebDav(BaseWorkerCustomer):
                     if result_upload['success']:
                         operation_progress["processed"] += 1
                         success_paths.append(path)
+                        if os.path.isfile(abs_path):
+                            os.remove(abs_path)
+                        elif os.path.islink(abs_path):
+                            os.unlink(abs_path)
+                        elif os.path.isdir(abs_path):
+                            shutil.rmtree(abs_path)
+                        else:
+                            error_paths.append(abs_path)
+                            break
 
                 except Exception as e:
                     self.logger.error(
