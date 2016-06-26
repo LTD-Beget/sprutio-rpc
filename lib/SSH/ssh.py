@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import sys
 import traceback
 import paramiko
 import logging
@@ -94,8 +95,7 @@ class SSH(object):
         self.ssh = paramiko.SSHClient()
         l = logging.getLogger("paramiko")
         l.setLevel(logging.DEBUG)
-        f = open('/var/log/fm/paramiko.log', 'w')
-        lh = logging.StreamHandler(f)
+        lh = logging.StreamHandler(sys.stdout)
         lh.setFormatter(logging.Formatter('%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d %(name)s: %(message)s',
                                           '%Y%m%d-%H:%M:%S'))
         l.addHandler(lh)
