@@ -310,7 +310,7 @@ class WebDav:
     def mkdir(self, path):
         return self.webdavClient.mkdir(self.to_byte(path))
 
-    def upload(self, source, target, overwrite=False, rename=None):
+    def upload(self, source, target, overwrite=False, rename=None, operation_progress=None):
         result = {}
         file_list = {}
 
@@ -323,12 +323,12 @@ class WebDav:
             else:
                 target_path = os.path.join(target, source)
 
-            if not overwrite and self.webdavClient.check(target_path):
+            if not overwrite and self.exists(target_path):
                 failed.append(source)
                 raise Exception("File '%s' already exists and overwrite not permitted" % target_path)
 
             try:
-                self.webdavClient.upload(self.to_string(target_path), source)
+                self.webdavClient.upload(self.to_string(target_path), source, operation_progress)
             except Exception as e:
                 failed.append(source)
                 self.logger.error("Error in WebDav upload(): %s, traceback = %s" % (str(e), traceback.format_exc()))

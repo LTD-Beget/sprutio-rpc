@@ -15,7 +15,6 @@ class CopyToWebDav(BaseWorkerCustomer):
         self.target = target
         self.paths = paths
         self.overwrite = overwrite
-        self.webdav = WebDavConnection.create(self.login, self.target.get('server_id'), self.logger)
 
     def run(self):
         try:
@@ -40,6 +39,7 @@ class CopyToWebDav(BaseWorkerCustomer):
                 raise Exception("Target path empty")
 
             source_path = self.get_abs_path(source_path)
+            webdav = WebDavConnection.create(self.login, self.target.get('server_id'), self.logger)
 
             self.logger.info("CopyToWebDav process run source = %s , target = %s" % (source_path, target_path))
 
@@ -54,38 +54,14 @@ class CopyToWebDav(BaseWorkerCustomer):
                     abs_path = self.get_abs_path(path)
                     file_basename = os.path.basename(abs_path)
 
+                    uploading_path = abs_path
                     if os.path.isdir(abs_path):
-                        destination = '{0}/{1}'.format(target_path, file_basename)
-                        self.logger.info("Creating directory %s" % destination)
+                        uploading_path += '/'
+                        file_basename += '/'
 
-                        self.make_destination_dir(destination)
+                    webdav.upload(uploading_path, target_path, self.overwrite, file_basename)
 
-                        operation_progress["processed"] += 1
-
-                        for current, dirs, files in os.walk(abs_path):
-                            relative_root = os.path.relpath(current, source_path)
-                            for d in dirs:
-                                target_dir = '{0}/{1}/{2}'.format(target_path, relative_root, d)
-                                self.make_destination_dir(target_dir)
-                                operation_progress["processed"] += 1
-                            for f in files:
-                                source_file = os.path.join(current, f)
-                                target_file_path = '{0}/{1}'.format(target_path, relative_root)
-                                target_file = '{0}/{1}/{2}'.format(target_path, relative_root, f)
-                                self.copy_file_to_destination(source_file, target_file, target_file_path)
-                                operation_progress["processed"] += 1
-                    elif os.path.isfile(abs_path):
-                        try:
-                            target_file = '{0}/{1}'.format(target_path, file_basename)
-                            self.logger.info("Creating file %s" % target_file)
-                            self.copy_file_to_destination(abs_path, target_file, target_path)
-                            operation_progress["processed"] += 1
-                        except Exception as e:
-                            self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))
-                            raise e
-                        finally:
-                            operation_progress["processed"] += 1
-
+                    operation_progress["processed"] += 1
                     success_paths.append(path)
 
                 except Exception as e:
@@ -116,39 +92,6 @@ class CopyToWebDav(BaseWorkerCustomer):
             }
 
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
-
-    def make_destination_dir(self, destination):
-        if not self.webdav.exists(destination):
-            self.webdav.mkdir(destination)
-        elif self.overwrite and self.webdav.exists(destination) and not self.webdav.isdir(destination):
-            self.webdav.remove(destination)
-            self.webdav.mkdir(destination)
-        elif not self.overwrite and self.webdav.exists(destination) and not self.webdav.isdir(destination):
-            raise Exception("destination is not a dir")
-        else:
-            pass
-
-    def copy_file_to_destination(self, source_file, target_file, target_file_path):
-        webdav = self.webdav
-        if not webdav.exists(target_file):
-            upload_result = webdav.upload(source_file, target_file_path)
-            if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
-                raise upload_result['error'] if upload_result['error'] is not None else Exception("Upload error")
-        elif self.overwrite and webdav.exists(target_file) and not webdav.isdir(target_file):
-            upload_result = webdav.upload(source_file, target_file_path)
-            if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
-                raise upload_result['error'] if upload_result['error'] is not None else Exception("Upload error")
-        elif self.overwrite and webdav.isdir(target_file):
-            """
-            See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-            In case copy file when destination is dir
-            """
-            webdav.remove(target_file)
-            upload_result = webdav.upload(source_file, target_file_path)
-            if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
-                raise upload_result['error'] if upload_result['error'] is not None else Exception("Upload error")
-            else:
-                pass
 
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
 
