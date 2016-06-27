@@ -21,10 +21,12 @@ from lib.FileManager.workers.sftp.copySftp import CopySftp
 from lib.FileManager.workers.sftp.copyBetweenSftp import CopyBetweenSftp
 from lib.FileManager.workers.sftp.copyFromSftp import CopyFromSftp
 from lib.FileManager.workers.sftp.copyFromSftpToFtp import CopyFromSftpToFtp
+from lib.FileManager.workers.sftp.copyFromSftpToWebDav import CopyFromSftpToWebDav
 from lib.FileManager.workers.sftp.moveSftp import MoveSftp
 from lib.FileManager.workers.sftp.moveBetweenSftp import MoveBetweenSftp
 from lib.FileManager.workers.sftp.moveFromSftp import MoveFromSftp
 from lib.FileManager.workers.sftp.moveFromSftpToFtp import MoveFromSftpToFtp
+from lib.FileManager.workers.sftp.moveFromSftpToWebDav import MoveFromSftpToWebDav
 from lib.FileManager.workers.sftp.downloadFiles import DownloadFiles
 from lib.FileManager.workers.sftp.readImages import ReadImages
 from lib.FileManager.workers.sftp.uploadFile import UploadFile
@@ -453,6 +455,9 @@ class SftpController(Controller):
                 self.logger.info('###################################################3333333')
                 self.logger.info(p)
                 self.logger.info('###################################################3333333')
+            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.PUBLIC_WEBDAV:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, CopyFromSftpToWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
             elif (source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.SFTP) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
@@ -498,6 +503,9 @@ class SftpController(Controller):
             elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.PUBLIC_FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromSftpToFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.PUBLIC_WEBDAV:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, MoveFromSftpToWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             elif (source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.SFTP) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,

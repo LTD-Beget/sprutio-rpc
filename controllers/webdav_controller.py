@@ -23,6 +23,8 @@ from lib.FileManager.workers.webdav.copyBetweenWebDav import CopyBetweenWebDav
 from lib.FileManager.workers.webdav.moveBetweenWebDav import MoveBetweenWebDav
 from lib.FileManager.workers.webdav.copyFromWebDavToFtp import CopyFromWebDavToFtp
 from lib.FileManager.workers.webdav.moveFromWebDavToFtp import MoveFromWebDavToFtp
+from lib.FileManager.workers.webdav.copyFromWebDavToSftp import CopyFromWebDavToSftp
+from lib.FileManager.workers.webdav.moveFromWebDavToSftp import MoveFromWebDavToSftp
 
 from base.exc import Error
 from lib.FileManager import FM
@@ -331,6 +333,9 @@ class WebdavController(Controller):
             elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromWebDavToFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.SFTP:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, CopyFromWebDavToSftp, status_id.decode('UTF-8'), FM.Action.COPY, params))
             elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
@@ -377,6 +382,9 @@ class WebdavController(Controller):
             elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromWebDavToFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.SFTP:
+                p = Process(target=self.run_subprocess,
+                            args=(self.logger, MoveFromWebDavToSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
