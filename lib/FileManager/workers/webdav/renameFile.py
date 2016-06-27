@@ -26,11 +26,16 @@ class RenameFile(BaseWorkerCustomer):
             webdav_connection = WebDavConnection.create(self.login, self.session.get('server_id'), self.logger)
 
             try:
-                webdav_connection.rename(source_abs_path, target_abs_path)
+                if webdav_connection.isdir(source_abs_path):
+                    source_abs_path += '/'
+                    target_abs_path += '/'
+                source_info = webdav_connection.generate_file_info(source_abs_path)
+                webdav_connection.move_file(source_abs_path, target_abs_path)
+                target_info = webdav_connection.generate_file_info(target_abs_path)
 
                 webdav_result = {
-                    "source": source_abs_path,
-                    "target": target_abs_path
+                    "source": source_info,
+                    "target": target_info
                 }
 
                 result = {

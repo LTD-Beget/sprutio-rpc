@@ -75,10 +75,6 @@ class WebDav:
     def path(self, path):
         return urn.Urn(path).path()
 
-    def close(self):
-        pass
-        #self.webdav
-
     def generate_file_info(self, file_path):
         info = self.webdavClient.info(file_path)
 
@@ -254,15 +250,6 @@ class WebDav:
             item_path = '{0}/{1}'.format(path, name)
             listing.append(item_path)
         return listing
-
-    def rename(self, source, target):
-        if not self.exists(source):
-            raise Exception("Entry with source name not exists")
-
-        if self.exists(target):
-            raise Exception("Entry with target name already exists")
-
-        self.webdavClient.move(source, target)
 
     def remove(self, target):
         try:

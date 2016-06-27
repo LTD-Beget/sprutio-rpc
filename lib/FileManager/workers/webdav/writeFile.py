@@ -81,7 +81,6 @@ class WriteFile(BaseWorkerCustomer):
                 try:
                     webdav.upload(os.path.join(temp_dir, os.path.basename(abs_path)), abs_path, True)
                 except Exception as e:
-                    webdav.close()
                     result = WebDavConnection.get_error(e,
                                                      "Unable to upload tmp file during write error \"%s\"."
                                                      % os.path.basename(abs_path))
