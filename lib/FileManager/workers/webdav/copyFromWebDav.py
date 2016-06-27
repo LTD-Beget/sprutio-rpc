@@ -56,9 +56,11 @@ class CopyFromWebDav(BaseWorkerCustomer):
                 self.logger.info("path %s" % path)
                 try:
                     if self.webdav.isdir(path):
-                        self.download_directory_recursively(path, target_path, operation_progress)
-                    elif self.webdav.isfile(path):
-                        self.download_file_from_webdav(path, target_path, operation_progress)
+                        path += '/'
+                        target_path += path.replace(self.webdav.parent(path), "/", 1)
+
+                    self.logger.info("attempt to download path=%s, target_path=%s" % (path, target_path))
+                    self.download_file_from_webdav(path, target_path, operation_progress)
 
                     success_paths.append(path)
 
@@ -91,25 +93,11 @@ class CopyFromWebDav(BaseWorkerCustomer):
 
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
 
-    def download_directory_recursively(self, path, target_path, operation_progress):
-        file_basename = self.webdav.parent(path)
-        self.logger.info("file_basename %s" % file_basename)
-        destination = os.path.join(target_path, file_basename)
-        self.logger.info("downloading directory %s" % destination)
-
-        if self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-            shutil.rmtree(destination)
-        elif not self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-            raise Exception("destination is not a dir")
-        else:
-            pass
-
-        self.download_file_from_webdav(path, target_path, operation_progress)
-        operation_progress["processed"] += 1
-
     def download_file_from_webdav(self, path, target_path, operation_progress):
         try:
-            target_file = target_path
+            target_file = os.path.join(target_path, path)
+            self.logger.info("target_file=%s" % target_file)
+            download_result = {}
             if not os.path.exists(target_file):
                 download_result = self.webdav.download(path, target_path)
                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
@@ -135,6 +123,7 @@ class CopyFromWebDav(BaseWorkerCustomer):
                         "Download error")
             else:
                 pass
+            self.logger.info("download_result=%s" % download_result)
         except Exception as e:
             self.logger.info("Cannot copy file %s , %s" % (path, str(e)))
             raise e

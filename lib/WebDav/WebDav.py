@@ -17,29 +17,6 @@ from lib.FileManager.FM import REQUEST_DELAY
 
 TIMEOUT_LIMIT = 10
 
-def transfer_from_webdav_to_webdav(source_ftp, target_webdav, source_path, target_path):
-    """
-    Копирует файл между WebDav соединенеиями
-    :param FTP source_ftp:
-    :param WebDav target_webdav:
-    :param str source_path:
-    :param str target_path:
-    """
-    #source_file = file_transfer.RemoteFile(source_ftp.ftp, source_ftp.to_byte(source_path), "rb")
-    #target_file = file_transfer.RemoteFile(target_webdav, target_webdav.to_byte(target_path), "wb")
-
-    #source_fobj = source_file.fobj()
-    #try:
-        #target_fobj = target_file.fobj()
-        #try:
-            #file_transfer.copyfileobj(source_fobj, target_fobj)
-        #finally:
-            #target_fobj.close()
-    #finally:
-        #source_fobj.close()
-    pass
-
-
 class TimeZoneMSK(datetime.tzinfo):
     def dst(self, dt):
         return datetime.timedelta(0)
@@ -214,7 +191,6 @@ class WebDav:
         listdir = self.webdavClient.list(self.to_byte(path))
         self.logger.info("listdir=%s", listdir)
 
-        start_time = time.time()
         time_limit = int(time.time()) + TIMEOUT_LIMIT
 
         self.file_queue = JoinableQueue(maxsize=0)
@@ -246,15 +222,14 @@ class WebDav:
                 self.logger.error(
                     "Exception %s, %s" % (str(e), traceback.format_exc()))
 
-        while int(time.time()) <= time_limit:
+        while not self.file_queue.empty():
             self.logger.debug("file_queue size = %s , empty = %s (timeout: %s/%s)" % (
                 self.file_queue.qsize(), self.file_queue.empty(), str(int(time.time())), time_limit))
-            if self.file_queue.empty():
-                self.logger.debug("join() file_queue until workers done jobs")
-                self.file_queue.join()
-                break
-            else:
-                time.sleep(REQUEST_DELAY)
+            time.sleep(REQUEST_DELAY)
+
+        if self.file_queue.empty():
+            self.logger.debug("join() file_queue until workers done jobs")
+            self.file_queue.join()
 
         for p in self.processes:
             try:
@@ -279,13 +254,6 @@ class WebDav:
             item_path = '{0}/{1}'.format(path, name)
             listing.append(item_path)
         return listing
-
-    def file_info(self, path):
-
-        byte_path = self.to_byte(path)
-
-        file_info = self._make_file_info(byte_path)
-        return file_info
 
     def rename(self, source, target):
         if not self.exists(source):
@@ -441,36 +409,46 @@ class WebDav:
 
             return result
 
-    def copy_directory_recusively(self, source, destination, overwrite):
-        success_paths = []
-        error_paths = []
-        self.make_destination_dir(destination, overwrite)
-        list_dir = self.listdir(source)
-        if len(list_dir) == 0:
-            success_paths.append(destination)
-            return success_paths, error_paths
+    def move_file(self, source, target, overwrite=False):
+        result = {}
+        file_list = {}
 
-        for filename in list_dir:
+        succeed = []
+        failed = []
+
+        try:
+            if not overwrite and self.exists(target):
+                failed.append(source)
+                raise Exception('file exist and cannot be overwritten')
+
             try:
-                copy_result = {}
-                if self.isdir(filename):
-                    new_filename = filename.replace(source, "")
-                    new_source = source + new_filename
-                    new_destination = destination + new_filename
-                    copy_success_path, copy_error_path = self.copy_directory_recusively(new_source, new_destination, overwrite)
-                    if len(copy_error_path) == 0:
-                        copy_result['success'] = True
-                else:
-                    new_destination = destination + filename.replace(source, "")
-                    copy_result = self.copy_file(filename, self.path(new_destination), overwrite=True)
+                self.logger.debug("Moving file source=%s, target=%s" % (source, target))
+                self.webdavClient.move(source, target)
 
-                if copy_result['success']:
-                    success_paths.append(filename)
             except Exception as e:
-                error_paths.append(filename)
-                self.logger.info("Error=%s" % str(e))
+                failed.append(source)
+                raise Exception('Cannot move file %s' % (e,))
 
-        return success_paths, error_paths
+            succeed.append(source)
+
+            file_list['succeed'] = succeed
+            file_list['failed'] = failed
+
+            result['success'] = True
+            result['error'] = None
+            result['file_list'] = file_list
+
+            return result
+
+        except Exception as e:
+            file_list['succeed'] = succeed
+            file_list['failed'] = failed
+
+            result['success'] = False
+            result['error'] = e
+            result['file_list'] = file_list
+
+            return result
 
     def make_destination_dir(self, destination, overwrite):
         self.logger.info("making destination %s" % destination)

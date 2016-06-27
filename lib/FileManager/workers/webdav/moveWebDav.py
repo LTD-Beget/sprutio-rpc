@@ -52,36 +52,24 @@ class MoveWebDav(BaseWorkerCustomer):
 
             for path in self.paths:
                 try:
-                    self.logger.info("target_directory=%s" % target_directory)
                     replaced_path = path
                     if source_path != '/':
-                        replaced_path = path.replace(source_path, "", 1)
+                        replaced_path = path.replace(webdav.parent(path), "/", 1)
                     if target_directory != '/':
                         target_path = target_directory + replaced_path
                     else:
                         target_path = replaced_path
+                    
+                    if webdav.isdir(path):
+                        path += '/'
 
-                    if webdav.isfile(path):
-                        self.logger.info("move file from source_path=%s to target_path=%s" % (path, target_path))
-                        copy_result = webdav.copy_file(path, webdav.path(target_path), overwrite=True)
-                        if not copy_result['success'] or len(copy_result['file_list']['failed']) > 0:
-                            raise copy_result['error'] if copy_result['error'] is not None else Exception(
-                                "Upload error")
-                        operation_progress["processed"] += 1
-                    elif webdav.isdir(path):
-                        self.logger.info("move directory from source_path=%s to target_path=%s" % (path, target_path))
-                        success_paths, copy_error_paths = webdav.copy_directory_recusively(path, webdav.path(target_path), self.overwrite)
-                        if len(copy_error_paths) > 0:
-                            error_paths.append(path)
-                        operation_progress["processed"] += 1
-                    else:
-                        error_paths.append(path)
-                        break
+                    copy_result = webdav.move_file(path, webdav.path(target_path), overwrite=True)
+                    if not copy_result['success'] or len(copy_result['file_list']['failed']) > 0:
+                        raise copy_result['error'] if copy_result['error'] is not None else Exception(
+                            "Upload error")
+                    operation_progress["processed"] += 1
 
                     success_paths.append(path)
-                    self.logger.info("error_paths=%s" % error_paths)
-                    if path not in error_paths:
-                        webdav.remove(path)
 
                 except Exception as e:
                     self.logger.error(

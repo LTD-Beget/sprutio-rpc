@@ -56,11 +56,16 @@ class MoveFromWebDav(BaseWorkerCustomer):
                 self.logger.info("path %s" % path)
                 try:
                     if self.webdav.isdir(path):
-                        self.download_directory_recursively(path, target_path, operation_progress)
-                    elif self.webdav.isfile(path):
-                        self.download_file_from_webdav(path, target_path, operation_progress)
+                        path += '/'
+                        target_path += path.replace(self.webdav.parent(path), "/", 1)
 
-                    success_paths.append(path)
+                    download_result = self.download_file_from_webdav(path, target_path, operation_progress)
+
+                    self.logger.info("download_result=%s" % download_result)
+
+                    if download_result['success']:
+                        success_paths.append(path)
+                        self.webdav.remove(path)
 
                 except Exception as e:
                     self.logger.error(
@@ -91,25 +96,10 @@ class MoveFromWebDav(BaseWorkerCustomer):
 
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
 
-    def download_directory_recursively(self, path, target_path, operation_progress):
-        file_basename = self.webdav.parent(path)
-        self.logger.info("file_basename %s" % file_basename)
-        destination = os.path.join(target_path, file_basename).replace("/mnt", "")
-        self.logger.info("downloading directory %s" % destination)
-
-        if self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-            shutil.rmtree(destination)
-        elif not self.overwrite and os.path.exists(destination) and not os.path.isdir(destination):
-            raise Exception("destination is not a dir")
-        else:
-            pass
-
-        self.download_file_from_webdav(path, target_path, operation_progress)
-        operation_progress["processed"] += 1
-
     def download_file_from_webdav(self, path, target_path, operation_progress):
         try:
-            target_file = target_path.replace("/mnt", "")
+            download_result = {}
+            target_file = target_path + path
             if not os.path.exists(target_file):
                 download_result = self.webdav.download(path, target_path)
                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
@@ -135,12 +125,14 @@ class MoveFromWebDav(BaseWorkerCustomer):
                         "Download error")
             else:
                 pass
-            self.webdav.remove(path)
+
         except Exception as e:
             self.logger.info("Cannot move file %s , %s" % (path, str(e)))
             raise e
         finally:
             operation_progress["processed"] += 1
+
+        return download_result
 
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
