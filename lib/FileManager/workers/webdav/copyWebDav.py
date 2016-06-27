@@ -48,7 +48,6 @@ class CopyWebDav(BaseWorkerCustomer):
 
             for path in self.paths:
                 try:
-                    self.logger.info("source_path=%s" % source_path)
                     replaced_path = path
                     if source_path != '/':
                         replaced_path = path.replace(webdav.parent(path), "/", 1)
@@ -60,7 +59,6 @@ class CopyWebDav(BaseWorkerCustomer):
                     if webdav.isdir(path):
                         path += '/'
 
-                    self.logger.info("copy file from source_path=%s to target_path=%s" % (path, target_path))
                     copy_result = webdav.copy_file(path, webdav.path(target_path), overwrite=True)
                     if not copy_result['success'] or len(copy_result['file_list']['failed']) > 0:
                         raise copy_result['error'] if copy_result['error'] is not None else Exception(

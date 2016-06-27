@@ -16,7 +16,7 @@ class CreateCopy(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            self.logger.info("CreateCopy process run")
+            self.logger.info("WebDav CreateCopy process run")
 
             # Временная хеш таблица для директорий по которым будем делать листинг
             directories = {}

@@ -20,10 +20,8 @@ class UploadFile(BaseWorkerCustomer):
             webdav = WebDavConnection.create(self.login, self.session.get('server_id'), self.logger)
 
             target_file = "{0}{1}".format(self.path, os.path.basename(self.file_path))
-            self.logger.info("target_file=%s" % target_file)
 
             if not webdav.exists(target_file):
-                self.logger.info("file_path=%s, path=%s" % (self.file_path, self.path))
                 upload_result = webdav.upload(self.file_path, self.path)
                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
                     raise upload_result['error'] if upload_result['error'] is not None else Exception(

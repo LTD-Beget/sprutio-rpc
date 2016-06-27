@@ -107,7 +107,6 @@ class CopyFromWebDavToFtp(BaseWorkerCustomer):
     def upload_files_recursive_to_ftp(self, path, read_path, target_path, ftp, operation_progress):
         success_paths = []
         error_paths = []
-        upload_result = {}
         try:
             abs_path = self.get_abs_path(path)
             file_basename = os.path.basename(abs_path)

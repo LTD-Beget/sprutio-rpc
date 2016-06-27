@@ -34,7 +34,6 @@ class CopyBetweenWebDav(BaseWorkerCustomer):
 
             source_path = self.source.get('path')
             target_path = self.target.get('path')
-            self.logger.info("source_path=%s, target_path=%s" % (source_path, target_path))
             hash_str = self.random_hash()
             temp_path = TMP_DIR + '/' + self.login + '/' + hash_str + '/'
 
@@ -58,8 +57,6 @@ class CopyBetweenWebDav(BaseWorkerCustomer):
                 try:
                     download_result = self.download_file_from_webdav(path, temp_path, source_webdav)
 
-                    self.logger.info("download_result=%s" % download_result)
-
                     if download_result["success"]:
                         filedir = source_webdav.parent(path)
                         filename = path
@@ -70,8 +67,6 @@ class CopyBetweenWebDav(BaseWorkerCustomer):
                         read_path = (temp_path + filename)
                         if not os.path.exists(read_path):
                             raise OSError("File not downloaded")
-
-                        self.logger.info("filename=%s" % filename)
 
                         upload_result = self.upload_file_to_webdav(read_path, target_path, filename, operation_progress, target_webdav)
                         if upload_result['success']:
@@ -109,7 +104,6 @@ class CopyBetweenWebDav(BaseWorkerCustomer):
 
     def upload_file_to_webdav(self, read_path, write_directory, filename, operation_progress, webdav):
         try:
-            self.logger.info("attempt to upload read_path=%s, filename=%s" % (read_path, filename))
             upload_result = webdav.upload(read_path, write_directory, self.overwrite, filename)
             operation_progress["processed"] += 1
         except Exception as e:

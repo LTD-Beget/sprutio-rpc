@@ -50,18 +50,13 @@ class MoveFromWebDav(BaseWorkerCustomer):
             t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
             t_progress.start()
 
-            self.logger.info("paths %s" % self.paths)
-
             for path in self.paths:
-                self.logger.info("path %s" % path)
                 try:
                     if self.webdav.isdir(path):
                         path += '/'
                         target_path += path.replace(self.webdav.parent(path), "/", 1)
 
                     download_result = self.download_file_from_webdav(path, target_path, operation_progress)
-
-                    self.logger.info("download_result=%s" % download_result)
 
                     if download_result['success']:
                         success_paths.append(path)

@@ -109,8 +109,6 @@ class DownloadFiles(BaseWorkerCustomer):
                 inode = int(file_info.st_ino)
                 size = int(file_info.st_size)
 
-            self.logger.info("downloading path %s" % download_path)
-
             result = {
                 "success": success_paths,
                 "errors": error_paths,

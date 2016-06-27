@@ -59,7 +59,6 @@ class CopyFromWebDav(BaseWorkerCustomer):
                         path += '/'
                         target_path += path.replace(self.webdav.parent(path), "/", 1)
 
-                    self.logger.info("attempt to download path=%s, target_path=%s" % (path, target_path))
                     self.download_file_from_webdav(path, target_path, operation_progress)
 
                     success_paths.append(path)
@@ -96,7 +95,6 @@ class CopyFromWebDav(BaseWorkerCustomer):
     def download_file_from_webdav(self, path, target_path, operation_progress):
         try:
             target_file = os.path.join(target_path, path)
-            self.logger.info("target_file=%s" % target_file)
             download_result = {}
             if not os.path.exists(target_file):
                 download_result = self.webdav.download(path, target_path)
@@ -123,7 +121,7 @@ class CopyFromWebDav(BaseWorkerCustomer):
                         "Download error")
             else:
                 pass
-            self.logger.info("download_result=%s" % download_result)
+
         except Exception as e:
             self.logger.info("Cannot copy file %s , %s" % (path, str(e)))
             raise e
