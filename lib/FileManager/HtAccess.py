@@ -13,8 +13,8 @@ class HtAccess(object):
 
     @staticmethod
     def htaccess_open_directive(string):
-        if re.match('^(</)(.*)>$', string) is True:
-            return False
+        if re.match('^(</)(.*)>$', string) is not None:
+            return None
 
         return re.match('^<(.*)>$', string)
 
@@ -139,7 +139,7 @@ class HtAccess(object):
                 continue
 
             if self.htaccess_close_directive(trimmed_string) is not None:
-                inner_level -= trimmed_string
+                inner_level -= 1
                 if inner_level == 0:
                     inner_directive = False
 

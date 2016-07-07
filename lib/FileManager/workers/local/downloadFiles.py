@@ -37,6 +37,9 @@ class DownloadFiles(BaseWorkerCustomer):
             self.preload()
             self.logger.info("DownloadFiles process run")
 
+            self.prepare_tmp_dir_and_archive(target_path=self.download_dir,
+                                             ext=self.get_ext(self.mode))
+
             success_paths, error_paths = self.copy_files_to_tmp(self.download_dir)
 
             if len(success_paths) == 1:
@@ -155,10 +158,32 @@ class DownloadFiles(BaseWorkerCustomer):
         p.close()
         return s
 
-    def copy_files_to_tmp(self, target_path):
-        if not os.path.exists(target_path):
-            os.makedirs(target_path)
+    @staticmethod
+    def get_ext(mode):
+        ext = None
 
+        if mode == 'zip':
+            ext = '.zip'
+        elif mode == 'gzip':
+            ext = '.tar.gz'
+        elif mode == 'tar':
+            ext = '.tar'
+        elif mode == 'bz2':
+            ext = '.bz2'
+
+        return ext
+
+    @staticmethod
+    def prepare_tmp_dir_and_archive(target_path, ext=None):
+        if os.path.exists(target_path):
+            shutil.rmtree(target_path)
+
+        os.makedirs(target_path)
+
+        if ext is not None and os.path.exists(target_path + ext):
+            os.unlink(target_path + ext)
+
+    def copy_files_to_tmp(self, target_path):
         success_paths = []
         error_paths = []
 

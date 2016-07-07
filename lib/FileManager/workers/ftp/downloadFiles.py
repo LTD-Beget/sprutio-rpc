@@ -1,14 +1,16 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
 from config.main import TMP_DIR
 import traceback
 import os
 import subprocess
+import shutil
 
 
 class DownloadFiles(BaseWorkerCustomer):
     def __init__(self, paths, mode, session, *args, **kwargs):
         super(DownloadFiles, self).__init__(*args, **kwargs)
+
+        self.download_dir = os.path.join(TMP_DIR, self.login, self.random_hash())
 
         self.paths = paths
         self.mode = mode
@@ -19,8 +21,9 @@ class DownloadFiles(BaseWorkerCustomer):
             self.preload()
             self.logger.info("FTP DownloadFiles process run")
 
-            download_dir = TMP_DIR + '/' + self.login + '/' + self.random_hash() + '/'
-            success_paths, error_paths = self.copy_files_to_tmp(download_dir)
+            self.prepare_tmp_dir_and_archive(self.download_dir, self.get_ext(self.mode))
+
+            success_paths, error_paths = self.copy_files_to_tmp(self.download_dir)
 
             if len(success_paths) == 1:
                 one_file = True
@@ -35,9 +38,9 @@ class DownloadFiles(BaseWorkerCustomer):
             if len(error_paths) == 0:  # Значит все хорошо, можно дальше обрабатывать
                 if one_file is True:
                     if self.mode == "default":
-                        download_path = os.path.join(download_dir, os.path.basename(success_paths[0]))
+                        download_path = os.path.join(self.download_dir, os.path.basename(success_paths[0]))
                     else:
-                        download_path = download_dir.rstrip("/")
+                        download_path = self.download_dir.rstrip("/")
                         files_path = download_path
                         os.chdir(os.path.dirname(download_path))
 
@@ -71,7 +74,7 @@ class DownloadFiles(BaseWorkerCustomer):
                             if return_code != 0:
                                 raise Exception("Tar Error")
                 else:
-                    download_path = download_dir.rstrip("/")
+                    download_path = self.download_dir.rstrip("/")
                     files_path = download_path
                     os.chdir(os.path.dirname(download_path))
 
@@ -138,10 +141,32 @@ class DownloadFiles(BaseWorkerCustomer):
         p.close()
         return s
 
-    def copy_files_to_tmp(self, target_path):
-        if not os.path.exists(target_path):
-            os.makedirs(target_path)
+    @staticmethod
+    def get_ext(mode):
+        ext = None
 
+        if mode == 'zip':
+            ext = '.zip'
+        elif mode == 'gzip':
+            ext = '.tar.gz'
+        elif mode == 'tar':
+            ext = '.tar'
+        elif mode == 'bz2':
+            ext = '.bz2'
+
+        return ext
+
+    @staticmethod
+    def prepare_tmp_dir_and_archive(target_path, ext=None):
+        if os.path.exists(target_path):
+            shutil.rmtree(target_path)
+
+        os.makedirs(target_path)
+
+        if ext is not None and os.path.exists(target_path + ext):
+            os.unlink(target_path + ext)
+
+    def copy_files_to_tmp(self, target_path):
         ftp = self.get_ftp_connection(self.session)
 
         success_paths = []

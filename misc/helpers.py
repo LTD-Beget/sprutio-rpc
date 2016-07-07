@@ -9,6 +9,13 @@ from queue import Queue
 from misc.helperUnicode import as_default_string, as_unicode
 from base.exc import Error
 from threading import Thread
+import chardet
+import re
+from lib.FileManager import FM
+
+
+# чем больше - тем точнее определяется кодировка, но медленнее, 50000 - выбрано опытным путем
+CHARSET_DETECT_BUFFER = 50000
 
 
 def get_hostname():
@@ -327,3 +334,76 @@ class PwRepository(object):
             password_base = pwd.getpwnam(login)
             PwRepository.pws[login] = password_base
             return password_base
+
+
+def detect_encoding(content, path, encoding, logger):
+    if encoding != '':
+        return encoding
+
+    # part of file content for charset detection
+    part_content = content[0:CHARSET_DETECT_BUFFER] + content[-CHARSET_DETECT_BUFFER:]
+    chardet_result = chardet.detect(part_content)
+    detected = chardet_result["encoding"]
+    confidence = chardet_result["confidence"]
+
+    logger.debug("Detected encoding = %s (%s), %s" % (detected, confidence, path))
+
+    # костыль пока не соберем нормальную версию libmagick >= 5.10
+    # https://github.com/ahupp/python-magic/issues/47
+    #
+    # так же можно собрать uchardet от Mozilla, пока изучаю ее (тоже свои косяки),
+    # кстати ее порт на python chardet мы юзаем, а их сайт уже мертв :(
+    re_utf8 = re.compile('.*charset\s*=\s*utf\-8.*', re.UNICODE | re.IGNORECASE | re.MULTILINE)
+    html_ext = ['htm', 'html', 'phtml', 'php', 'inc', 'tpl', 'xml']
+    file_ext = os.path.splitext(path)[1][1:].strip().lower()
+    logger.debug("File ext = %s" % file_ext)
+
+    if confidence > 0.75 and detected != 'windows-1251' and detected != FM.DEFAULT_ENCODING:
+        if detected == "ISO-8859-7":
+            detected = "windows-1251"
+
+        if detected == "ISO-8859-2":
+            detected = "utf-8"
+
+        if detected == "ascii":
+            detected = "utf-8"
+
+        if detected == "MacCyrillic":
+            detected = "windows-1251"
+
+        # если все же ошиблись - костыль на указанный в файле charset
+        if detected != FM.DEFAULT_ENCODING and file_ext in html_ext:
+            result_of_search = re_utf8.search(part_content)
+            logger.debug(result_of_search)
+            if result_of_search is not None:
+                logger.debug("matched utf-8 charset")
+                detected = FM.DEFAULT_ENCODING
+            else:
+                logger.debug("not matched utf-8 charset")
+
+    elif confidence > 0.60 and detected != 'windows-1251' and detected != FM.DEFAULT_ENCODING:
+        if detected == "ISO-8859-2":
+            detected = "windows-1251"
+
+        if detected == "MacCyrillic":
+            detected = "windows-1251"
+
+        # если все же ошиблись - костыль на указанный в файле charset
+        if detected != FM.DEFAULT_ENCODING and file_ext in html_ext:
+            result_of_search = re_utf8.search(part_content)
+            logger.debug(result_of_search)
+            if result_of_search is not None:
+                logger.debug("matched utf-8 charset")
+                detected = FM.DEFAULT_ENCODING
+            else:
+                logger.debug("not matched utf-8 charset")
+
+    elif detected == 'windows-1251' or detected == FM.DEFAULT_ENCODING:
+        pass
+    else:
+        detected = FM.DEFAULT_ENCODING
+
+    encoding = detected if (detected or "").lower() in FM.encodings else FM.DEFAULT_ENCODING
+    logger.debug("Result encoding = %s, %s" % (encoding, path))
+
+    return encoding

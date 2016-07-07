@@ -51,7 +51,7 @@ class MoveLocal(BaseWorkerCustomer):
             # sleep for a while for better total counting
             time.sleep(REQUEST_DELAY)
 
-            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
+            t_progress = threading.Thread(target=update_progress, args=(self, operation_progress,))
             t_progress.start()
 
             for path in self.paths:

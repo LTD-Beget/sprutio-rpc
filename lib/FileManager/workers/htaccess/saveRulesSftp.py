@@ -4,9 +4,9 @@ import traceback
 import os
 
 
-class SaveRulesFtp(BaseWorkerCustomer):
+class SaveRulesSftp(BaseWorkerCustomer):
     def __init__(self, path, params, session, *args, **kwargs):
-        super(SaveRulesFtp, self).__init__(*args, **kwargs)
+        super(SaveRulesSftp, self).__init__(*args, **kwargs)
 
         self.path = path
         self.params = params
@@ -16,23 +16,23 @@ class SaveRulesFtp(BaseWorkerCustomer):
         try:
             self.preload()
             abs_path = self.get_abs_path(self.path)
-            self.logger.debug("FM SaveRulesFtp worker run(), abs_path = %s" % abs_path)
+            self.logger.debug("FM SaveRulesSftp worker run(), abs_path = %s" % abs_path)
 
-            ftp = self.get_ftp_connection(self.session)
+            sftp = self.get_sftp_connection(self.session)
 
             htaccess_path = os.path.join(self.path, '.htaccess')
 
-            if not ftp.exists(htaccess_path):
-                fd = ftp.open(htaccess_path, 'w')
+            if not sftp.exists(htaccess_path):
+                fd = sftp.open(htaccess_path, 'w')
                 fd.close()
 
-            with ftp.open(htaccess_path, 'r') as fd:
+            with sftp.open(htaccess_path, 'r') as fd:
                 old_content = fd.read()
 
             htaccess = HtAccess(old_content, self.logger)
             content = htaccess.write_htaccess_file(self.params)
 
-            with ftp.open(htaccess_path, 'w') as fd:
+            with sftp.open(htaccess_path, 'w') as fd:
                 fd.write(content)
 
             result = {

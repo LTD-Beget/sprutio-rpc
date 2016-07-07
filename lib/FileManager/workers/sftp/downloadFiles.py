@@ -1,9 +1,9 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
 from config.main import TMP_DIR
 import traceback
 import os
 import subprocess
+import shutil
 
 
 class DownloadFiles(BaseWorkerCustomer):
@@ -27,6 +27,8 @@ class DownloadFiles(BaseWorkerCustomer):
                 os.makedirs(self.download_dir)
 
             self.logger.info("DownloadFiles process run, %s" % self.paths)
+
+            self.prepare_tmp_dir_and_archive(self.download_dir, self.get_ext(self.mode))
 
             success_paths, error_paths = self.copy_files_to_tmp(self.download_dir)
 
@@ -148,11 +150,32 @@ class DownloadFiles(BaseWorkerCustomer):
         p.close()
         return s
 
-    def copy_files_to_tmp(self, target_path):
-        if not os.path.exists(target_path):
-            os.makedirs(target_path)
-        self.logger.info('stat {}: {}'.format(target_path, os.stat(target_path)))
+    @staticmethod
+    def get_ext(mode):
+        ext = None
 
+        if mode == 'zip':
+            ext = '.zip'
+        elif mode == 'gzip':
+            ext = '.tar.gz'
+        elif mode == 'tar':
+            ext = '.tar'
+        elif mode == 'bz2':
+            ext = '.bz2'
+
+        return ext
+
+    @staticmethod
+    def prepare_tmp_dir_and_archive(target_path, ext=None):
+        if os.path.exists(target_path):
+            shutil.rmtree(target_path)
+
+        os.makedirs(target_path)
+
+        if ext is not None and os.path.exists(target_path + ext):
+            os.unlink(target_path + ext)
+
+    def copy_files_to_tmp(self, target_path):
         success_paths = []
         error_paths = []
 

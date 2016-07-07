@@ -59,12 +59,15 @@ class HomeController(Controller):
             "path": path.decode('UTF-8')
         })
 
-    def action_read_file(self, login, password, path):
+    def action_read_file(self, login, password, path, encoding):
+        if encoding is None:
+            encoding = b''
 
         return self.get_process_data(ReadFile, {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
-            "path": path.decode('UTF-8')
+            "path": path.decode('UTF-8'),
+            "encoding": encoding.decode('UTF-8')
         })
 
     def action_write_file(self, login, password, path, content, encoding):
