@@ -184,6 +184,11 @@ class WebDav:
             "items": []
         }
 
+        try:
+            self.webdavClient.check('/')
+        except Exception:
+            raise Exception("Error during establishing webdav connection")
+
         listdir = self.webdavClient.list(self.to_byte(path))
         self.logger.info("listdir=%s", listdir)
 
