@@ -40,7 +40,7 @@ class RemoveWebDavConnection(BaseWorkerCustomer):
         cursor = db.cursor()
 
         try:
-            self.logger.info("Removing connection with id %s by user %s" % (self.connection_id, self.login))
+            self.logger.info("Removing webdav connection with id %s by user %s" % (self.connection_id, self.login))
 
             cursor.execute("DELETE FROM webdav_servers WHERE id = ? AND fm_login = ?", (self.connection_id, self.login))
 

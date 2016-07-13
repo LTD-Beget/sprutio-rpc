@@ -43,7 +43,7 @@ class MoveBetweenWebDav(BaseWorkerCustomer):
             if target_path is None:
                 raise Exception("Target path empty")
 
-            self.logger.info("CopyBetweenWebDav process run source = %s , target = %s" % (source_path, target_path))
+            self.logger.info("MoveBetweenWebDav process run source = %s , target = %s" % (source_path, target_path))
 
             source_webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
             target_webdav = WebDavConnection.create(self.login, self.target.get('server_id'), self.logger)

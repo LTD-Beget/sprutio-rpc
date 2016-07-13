@@ -20,8 +20,8 @@ class RenameFile(BaseWorkerCustomer):
             source_abs_path = os.path.abspath(self.source_path)
             target_abs_path = os.path.abspath(self.target_path)
 
-            self.logger.debug("FM WebDav NewFile worker run(), source_abs_path = %s" % source_abs_path)
-            self.logger.debug("FM WebDav NewFile worker run(), target_abs_path = %s" % target_abs_path)
+            self.logger.debug("FM WebDav NewFile worker run(), source_abs_path = %s, target_abs_path = %s" %
+                              (source_abs_path, target_abs_path))
 
             webdav_connection = WebDavConnection.create(self.login, self.session.get('server_id'), self.logger)
 

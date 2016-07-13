@@ -22,7 +22,7 @@ class WriteFile(BaseWorkerCustomer):
         try:
             self.preload()
             abs_path = self.path
-            self.logger.debug("FM WriteFile worker run(), abs_path = %s" % abs_path)
+            self.logger.debug("FM WebDav WriteFile worker run(), abs_path = %s" % abs_path)
 
             self.logger.debug("content %s" % pprint.pformat(self.content))
             self.logger.debug("encoding %s" % pprint.pformat(self.encoding))

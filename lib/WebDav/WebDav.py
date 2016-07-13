@@ -30,9 +30,7 @@ class TimeZoneMSK(datetime.tzinfo):
 
 class WebDavSession(ftplib.FTP):
     def __init__(self, host, user, passwd, timeout):
-        #ftplib.FTP.__init__(self)
         self.set_debuglevel(2)
-        # self.set_debuglevel(0)
         self.connect(host, timeout)
         self.login(user, passwd)
         self.set_pasv(True)
