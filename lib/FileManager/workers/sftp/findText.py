@@ -46,7 +46,7 @@ class FindText(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
 
             self.logger.debug("findText started with timeout = %s" % TIMEOUT_LIMIT)
             time_limit = int(time.time()) + TIMEOUT_LIMIT
@@ -137,7 +137,7 @@ class FindText(BaseWorkerCustomer):
 
     def worker(self, re_text, file_queue, result_queue, timeout):
         try:
-            worker_sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            worker_sftp = self.get_sftp_connection(self.session)
             while int(time.time()) < timeout:
                 if file_queue.empty() is not True:
                     f_path = file_queue.get()

@@ -15,7 +15,7 @@ class RemoveFiles(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             success_paths = []
             error_paths = []
 

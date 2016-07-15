@@ -16,7 +16,7 @@ class ChmodFiles(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             success_paths = []
             error_paths = []
 
@@ -131,7 +131,7 @@ class ChmodFiles(BaseWorkerCustomer):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
         for path in paths:
             try:
-                sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+                sftp = self.get_sftp_connection(self.session)
                 abs_path = os.path.abspath(path)
 
                 if count_dirs:

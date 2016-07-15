@@ -18,7 +18,7 @@ class CreateCopy(BaseWorkerCustomer):
             self.preload()
             self.logger.info("CreateCopy process run")
 
-            ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.session)
 
             # Временная хеш таблица для директорий по которым будем делать листинг
             directories = {}
@@ -44,10 +44,10 @@ class CreateCopy(BaseWorkerCustomer):
                     exist = False
 
                     if ftp.isdir(dir_path):
-                        filename = ftp.path.basename(dir_path)
+                        filename = os.path.basename(dir_path)
                         ext = ''
                     else:
-                        filename, file_extension = ftp.path.splitext(dir_path)
+                        filename, file_extension = ftp.path.splitext(os.path.basename(dir_path))
                         ext = file_extension
 
                     copy_name = filename + ' copy' + ext if i == 0 else filename + ' copy(' + str(i) + ')' + ext

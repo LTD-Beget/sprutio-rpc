@@ -41,8 +41,8 @@ class CopyBetweenFtp(BaseWorkerCustomer):
 
             self.logger.info("CopyFromFtp process run source = %s , target = %s" % (source_path, target_path))
 
-            source_ftp = FTPConnection.create(self.login, self.source.get('server_id'), self.logger)
-            target_ftp = FTPConnection.create(self.login, self.target.get('server_id'), self.logger)
+            source_ftp = self.get_ftp_connection(self.source)
+            target_ftp = self.get_ftp_connection(self.target)
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
@@ -164,7 +164,7 @@ class CopyBetweenFtp(BaseWorkerCustomer):
 
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        source_ftp = FTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+        source_ftp = self.get_ftp_connection(self.source)
         for path in paths:
             try:
                 abs_path = source_ftp.path.abspath(path)

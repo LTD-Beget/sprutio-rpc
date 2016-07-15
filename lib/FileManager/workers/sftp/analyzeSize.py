@@ -16,7 +16,7 @@ class AnalyzeSize(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             self.logger.debug("FM AnalyzeSize worker run(), abs_path = %s" % self.path)
 
             if not sftp.exists(self.path):

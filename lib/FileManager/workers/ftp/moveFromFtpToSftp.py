@@ -42,8 +42,8 @@ class MoveFromFtpToSftp(BaseWorkerCustomer):
 
             self.logger.info("MoveFromFtpToSftp process run source = %s , target = %s" % (source_path, target_path))
 
-            source_ftp = FTPConnection.create(self.login, self.source.get('server_id'), self.logger)
-            target_sftp = SFTPConnection.create(self.login, self.target.get('server_id'), self.logger)
+            source_ftp = self.get_ftp_connection(self.source)
+            target_sftp = Sself.get_ftp_connection(self.target)
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
@@ -132,7 +132,6 @@ class MoveFromFtpToSftp(BaseWorkerCustomer):
                         "Error copy %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
                     error_paths.append(path)
 
-
             operation_progress["operation_done"] = True
 
             result = {
@@ -159,7 +158,7 @@ class MoveFromFtpToSftp(BaseWorkerCustomer):
 
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        source_ftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+        source_ftp = Sself.get_ftp_connection(self.source)
         for path in paths:
             try:
                 abs_path = os.path.abspath(path)

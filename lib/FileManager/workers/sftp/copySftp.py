@@ -21,7 +21,7 @@ class CopySftp(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.source)
             success_paths = []
             error_paths = []
 
@@ -167,7 +167,7 @@ class CopySftp(BaseWorkerCustomer):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
         for path in paths:
             try:
-                sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+                sftp = self.get_sftp_connection(self.source)
                 if count_dirs:
                     progress_object["total"] += 1
 
@@ -190,8 +190,7 @@ class CopySftp(BaseWorkerCustomer):
         Скачивает файл с source_sftp/source_path
         закачивает на target_sftp/target_path
         удаляет скачанный файл
-        :param SFTP source_sftp:
-        :param SFTP target_sftp:
+        :param SFTP sftp:
         :param str source_path:
         :param str target_path:
         :return:

@@ -17,7 +17,7 @@ class ListFiles(BaseWorkerCustomer):
         try:
             self.preload()
             self.logger.debug("FM ListFiles worker run(), abs_path = %s" % self.path)
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
 
             info = sftp.list(path=self.path)
 

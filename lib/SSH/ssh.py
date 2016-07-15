@@ -96,8 +96,9 @@ class SSH(object):
         l = logging.getLogger("paramiko")
         l.setLevel(logging.DEBUG)
         lh = logging.StreamHandler(sys.stdout)
-        lh.setFormatter(logging.Formatter('%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d %(name)s: %(message)s',
-                                          '%Y%m%d-%H:%M:%S'))
+        lh.setFormatter(logging.Formatter(
+            '%(levelname)-.3s [%(asctime)s.%(msecs)03d] thr=%(_threadid)-3d %(name)s: %(message)s', '%Y%m%d-%H:%M:%S'
+        ))
         l.addHandler(lh)
 
         self.pkey = pkey

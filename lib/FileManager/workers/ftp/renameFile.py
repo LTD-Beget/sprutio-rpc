@@ -23,7 +23,7 @@ class RenameFile(BaseWorkerCustomer):
             self.logger.debug("FM FTP NewFile worker run(), source_abs_path = %s" % source_abs_path)
             self.logger.debug("FM FTP NewFile worker run(), target_abs_path = %s" % target_abs_path)
 
-            ftp_connection = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp_connection = self.get_ftp_connection(self.session)
 
             try:
                 source_info = ftp_connection.file_info(source_abs_path)

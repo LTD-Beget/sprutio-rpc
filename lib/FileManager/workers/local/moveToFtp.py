@@ -43,7 +43,7 @@ class MoveToFtp(BaseWorkerCustomer):
             source_path = self.get_abs_path(source_path)
 
             self.logger.info("MoveToFtp process run source = %s , target = %s" % (source_path, target_path))
-            ftp = FTPConnection.create(self.login, self.target.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.target)
 
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()

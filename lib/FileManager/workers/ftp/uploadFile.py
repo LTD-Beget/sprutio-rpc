@@ -18,7 +18,7 @@ class UploadFile(BaseWorkerCustomer):
             self.preload()
             self.logger.info("FTP UploadFile process run")
 
-            ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.session)
 
             target_file = ftp.path.join(self.path, os.path.basename(self.file_path))
 

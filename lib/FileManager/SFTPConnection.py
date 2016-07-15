@@ -42,8 +42,8 @@ class SFTPConnection(object):
             }
             # TODO add pbkey support
             connection = SFTP(hostname=params['host'], username=params['user'],
-                             password=params['password'], pkey=None, port=params['port'],
-                             logger=logger)
+                              password=params['password'], pkey=None, port=params['port'],
+                              logger=logger)
             return connection
 
         except Exception as e:

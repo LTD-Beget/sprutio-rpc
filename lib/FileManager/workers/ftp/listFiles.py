@@ -17,7 +17,7 @@ class ListFiles(BaseWorkerCustomer):
             abs_path = os.path.abspath(self.path)
             self.logger.debug("FM FTP ListFiles worker run(), abs_path = %s" % abs_path)
 
-            ftp_connection = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp_connection = self.get_ftp_connection(self.session)
             listing = ftp_connection.list(path=abs_path)
 
             result = {

@@ -14,7 +14,7 @@ class NewFile(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             abs_path = self.path
             self.logger.debug("FM NewFile worker run(), abs_path = %s" % abs_path)
 

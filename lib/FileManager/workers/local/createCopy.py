@@ -42,7 +42,7 @@ class CreateCopy(BaseWorkerCustomer):
                         filename = os.path.basename(dir_path)
                         ext = ''
                     else:
-                        filename, file_extension = os.path.splitext(dir_path)
+                        filename, file_extension = os.path.splitext(os.path.basename(dir_path))
                         ext = file_extension
 
                     i = 0

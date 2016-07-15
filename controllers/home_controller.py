@@ -32,7 +32,7 @@ import traceback
 from lib.FileManager.OperationStatus import OperationStatus
 
 
-class LocalController(Controller):
+class HomeController(Controller):
     def action_list_files(self, login, password, path):
 
         return self.get_process_data(ListFiles, {
@@ -396,7 +396,7 @@ class LocalController(Controller):
             if source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyLocal, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.PUBLIC_FTP:
+            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyToFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
             elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.SFTP:
@@ -437,7 +437,7 @@ class LocalController(Controller):
             if source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveLocal, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.PUBLIC_FTP:
+            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveToFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.SFTP:

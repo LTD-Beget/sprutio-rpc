@@ -447,7 +447,7 @@ class SftpController(Controller):
             if source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromSftp, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.PUBLIC_FTP:
+            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromSftpToFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
                 self.logger.info('###################################################3333333')
@@ -495,14 +495,14 @@ class SftpController(Controller):
             if source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.PUBLIC_FTP:
+            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromSftpToFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             elif (source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.SFTP) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif (source.get('type') == FM.Module.PUBLIC_FTP and target.get('type') == FM.Module.PUBLIC_FTP) and (
+            elif (source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.FTP) and (
                         source.get('server_id') != target.get('server_id')):
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveBetweenSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
