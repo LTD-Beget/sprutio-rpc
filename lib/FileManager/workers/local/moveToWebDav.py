@@ -16,19 +16,20 @@ class MoveToWebDav(BaseWorkerCustomer):
         self.target = target
         self.paths = paths
         self.overwrite = overwrite
+        self.operation_progress = {
+            "total_done": False,
+            "total": 0,
+            "operation_done": False,
+            "processed": 0,
+            "file_uploading": 0,
+            "previous_percent": 0
+        }
 
     def run(self):
         try:
             self.preload()
             success_paths = []
             error_paths = []
-
-            operation_progress = {
-                "total_done": False,
-                "total": 0,
-                "operation_done": False,
-                "processed": 0
-            }
 
             source_path = self.source.get('path')
             target_path = self.target.get('path')
@@ -44,11 +45,8 @@ class MoveToWebDav(BaseWorkerCustomer):
 
             self.logger.info("MoveToWebDav process run source = %s , target = %s" % (source_path, target_path))
 
-            t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
+            t_total = threading.Thread(target=self.get_total, args=(self.operation_progress, self.paths))
             t_total.start()
-
-            t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
-            t_progress.start()
 
             for path in self.paths:
                 try:
@@ -60,10 +58,13 @@ class MoveToWebDav(BaseWorkerCustomer):
                         uploading_path += '/'
                         file_basename += '/'
 
-                    result_upload = webdav.upload(uploading_path, target_path, self.overwrite, file_basename)
+                    self.operation_progress["file_uploading"] += 1
+
+                    result_upload = webdav.upload(uploading_path, target_path, self.overwrite, file_basename,
+                                                  self.uploading_progress)
 
                     if result_upload['success']:
-                        operation_progress["processed"] += 1
+                        self.operation_progress["processed"] += 1
                         success_paths.append(path)
                         if os.path.isfile(abs_path):
                             os.remove(abs_path)
@@ -80,7 +81,7 @@ class MoveToWebDav(BaseWorkerCustomer):
                         "Error copy %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
                     error_paths.append(path)
 
-            operation_progress["operation_done"] = True
+            self.operation_progress["operation_done"] = True
 
             result = {
                 "success": success_paths,
@@ -128,27 +129,20 @@ class MoveToWebDav(BaseWorkerCustomer):
         self.logger.debug("done get_total()")
         return
 
-    def update_progress(self, progress_object):
-        self.logger.debug("start update_progress()")
-        next_tick = time.time() + REQUEST_DELAY
+    def uploading_progress(self, download_t, download_d, upload_t, upload_d):
+        percent_upload = 0
+        if upload_t != 0:
+            percent_upload = round(float(upload_d) / float(upload_t), 2)
 
-        self.on_running(self.status_id, pid=self.pid, pname=self.name)
+        if percent_upload != self.operation_progress.get("previous_percent"):
+            self.operation_progress["previous_percent"] = percent_upload
+            total_percent = percent_upload + self.operation_progress.get("processed")
 
-        while not progress_object.get("operation_done"):
-            if time.time() > next_tick and progress_object.get("total_done"):
-                progress = {
-                    'percent': round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2),
-                    'text': str(int(round(float(progress_object.get("processed")) / float(progress_object.get("total")),
-                                          2) * 100)) + '%'
-                }
+            percent = round(float(total_percent) /
+                            float(self.operation_progress.get("total")), 2)
+            progress = {
+                'percent': percent,
+                'text': str(int(percent * 100)) + '%'
+            }
 
-                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-            elif time.time() > next_tick:
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-
-        self.logger.debug("done update_progress()")
-        return
-
+            self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
