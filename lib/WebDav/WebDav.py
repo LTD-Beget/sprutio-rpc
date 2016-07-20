@@ -317,7 +317,7 @@ class WebDav:
 
             return result
 
-    def download(self, source, target):
+    def download(self, source, target, operation_progress=None):
         result = {}
         file_list = {}
 
@@ -329,7 +329,7 @@ class WebDav:
 
             try:
                 self.logger.debug("Downloading source=%s, target_path=%s" % (source, target_path))
-                self.webdavClient.download(source, target_path)
+                self.webdavClient.download(source, target_path, operation_progress)
             except Exception as e:
                 failed.append(source)
                 self.logger.error("Error in WebDav download(): %s, traceback = %s" % (str(e), traceback.format_exc()))

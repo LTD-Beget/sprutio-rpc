@@ -17,19 +17,19 @@ class MoveFromWebDav(BaseWorkerCustomer):
         self.paths = paths
         self.overwrite = overwrite
         self.webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
+        self.operation_progress = {
+            "total_done": False,
+            "total": 0,
+            "operation_done": False,
+            "processed": 0,
+            "previous_percent": 0
+        }
 
     def run(self):
         try:
             self.preload()
             success_paths = []
             error_paths = []
-
-            operation_progress = {
-                "total_done": False,
-                "total": 0,
-                "operation_done": False,
-                "processed": 0
-            }
 
             source_path = self.source.get('path')
             target_path = self.target.get('path')
@@ -44,19 +44,17 @@ class MoveFromWebDav(BaseWorkerCustomer):
 
             self.logger.info("MoveFromWebDav process run source = %s , target = %s" % (source_path, target_path))
 
-            t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
+            t_total = threading.Thread(target=self.get_total, args=(self.operation_progress, self.paths))
             t_total.start()
-
-            t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
-            t_progress.start()
 
             for path in self.paths:
                 try:
+                    download_path = target_path
                     if self.webdav.isdir(path):
                         path += '/'
-                        target_path += path.replace(self.webdav.parent(path), "/", 1)
+                        download_path += path.replace(self.webdav.parent(path), "/", 1)
 
-                    download_result = self.download_file_from_webdav(path, target_path, operation_progress)
+                    download_result = self.download_file_from_webdav(path, download_path, self.operation_progress)
 
                     if download_result['success']:
                         success_paths.append(path)
@@ -67,7 +65,7 @@ class MoveFromWebDav(BaseWorkerCustomer):
                         "Error copy %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
                     error_paths.append(path)
 
-            operation_progress["operation_done"] = True
+            self.operation_progress["operation_done"] = True
 
             result = {
                 "success": success_paths,
@@ -96,13 +94,13 @@ class MoveFromWebDav(BaseWorkerCustomer):
             download_result = {}
             target_file = target_path + path
             if not os.path.exists(target_file):
-                download_result = self.webdav.download(path, target_path)
+                download_result = self.webdav.download(path, target_path, self.downloading_progress)
                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
                     raise download_result['error'] if download_result[
                                                           'error'] is not None else Exception(
                         "Download error")
             elif self.overwrite and os.path.exists(target_file) and not os.path.isdir(target_file):
-                download_result = self.webdav.download(path, target_path)
+                download_result = self.webdav.download(path, target_path, self.downloading_progress)
                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
                     raise download_result['error'] if download_result[
                                                           'error'] is not None else Exception(
@@ -113,7 +111,7 @@ class MoveFromWebDav(BaseWorkerCustomer):
                 In case copy file when destination is dir
                 """
                 shutil.rmtree(target_file)
-                download_result = self.webdav.download(path, target_path)
+                download_result = self.webdav.download(path, target_path, self.downloading_progress)
                 if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
                     raise download_result['error'] if download_result[
                                                           'error'] is not None else Exception(
@@ -129,49 +127,52 @@ class MoveFromWebDav(BaseWorkerCustomer):
 
         return download_result
 
-    def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
-        self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
+    def get_total(self, progress_object, paths, count_files=True):
+        self.logger.debug("start get_total() files = %s" % count_files)
         webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
         for path in paths:
             try:
-                if count_dirs:
-                    progress_object["total"] += 1
+                self.recursive_total(webdav, path, progress_object)
 
-                for file in webdav.listdir(path):
-                    if count_dirs and webdav.isdir(file):
-                        progress_object["total"] += 1
-                    if count_files and webdav.isfile(file):
-                        progress_object["total"] += 1
             except Exception as e:
                 self.logger.error("Error get_total file %s , error %s" % (str(path), str(e)))
                 continue
 
         progress_object["total_done"] = True
-        self.logger.debug("done get_total()")
+        self.logger.debug("done get_total(), found %s files" % progress_object.get("total"))
         return
 
-    def update_progress(self, progress_object):
-        self.logger.debug("start update_progress()")
-        next_tick = time.time() + REQUEST_DELAY
+    def recursive_total(self, webdav, path, progress_object):
+        if webdav.isfile(path):
+            progress_object["total"] += 1
+        else:
+            for file in webdav.listdir(path):
+                self.recursive_total(webdav, file, progress_object)
 
-        self.on_running(self.status_id, pid=self.pid, pname=self.name)
+    def downloading_progress(self, download_t, download_d, upload_t, upload_d):
+        try:
+            percent_download = 0
+            if download_t != 0:
+                percent_download = round(float(download_d) / float(download_t), 2)
 
-        while not progress_object.get("operation_done"):
-            if time.time() > next_tick and progress_object.get("total_done"):
+            if percent_download != self.operation_progress.get("previous_percent"):
+                if percent_download == 0 and self.operation_progress.get("previous_percent") != 0:
+                    self.operation_progress["processed"] += 1
+                self.operation_progress["previous_percent"] = percent_download
+                total_percent = percent_download + self.operation_progress.get("processed")
+
+                denominator = 50
+                if self.operation_progress.get("total_done"):
+                    denominator = self.operation_progress.get("total")
+                percent = round(float(total_percent) /
+                                float(denominator), 2)
+                self.logger.debug("percentage changed to %s" % percent)
                 progress = {
-                    'percent': round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2),
-                    'text': str(int(round(float(progress_object.get("processed")) / float(progress_object.get("total")),
-                                          2) * 100)) + '%'
+                    'percent': percent,
+                    'text': str(int(percent * 100)) + '%'
                 }
 
                 self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-            elif time.time() > next_tick:
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-
-        self.logger.debug("done update_progress()")
-        return
-
-
+        except Exception as ex:
+            self.logger.error("Error in MoveFromWebDav downloading_progress(): %s, traceback = %s" %
+                              (str(ex), traceback.format_exc()))

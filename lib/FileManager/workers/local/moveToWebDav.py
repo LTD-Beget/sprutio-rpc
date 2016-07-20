@@ -21,7 +21,6 @@ class MoveToWebDav(BaseWorkerCustomer):
             "total": 0,
             "operation_done": False,
             "processed": 0,
-            "file_uploading": 0,
             "previous_percent": 0
         }
 
@@ -58,13 +57,10 @@ class MoveToWebDav(BaseWorkerCustomer):
                         uploading_path += '/'
                         file_basename += '/'
 
-                    self.operation_progress["file_uploading"] += 1
-
                     result_upload = webdav.upload(uploading_path, target_path, self.overwrite, file_basename,
                                                   self.uploading_progress)
 
                     if result_upload['success']:
-                        self.operation_progress["processed"] += 1
                         success_paths.append(path)
                         if os.path.isfile(abs_path):
                             os.remove(abs_path)
@@ -105,44 +101,48 @@ class MoveToWebDav(BaseWorkerCustomer):
 
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
 
-    def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
+    def get_total(self, progress_object, paths, count_files=True):
 
-        self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
+        self.logger.debug("start get_total() files = %s" % count_files)
 
         for path in paths:
             try:
                 abs_path = self.get_abs_path(path)
 
-                if count_dirs:
-                    progress_object["total"] += 1
-
                 for current, dirs, files in os.walk(abs_path):
-                    if count_dirs:
-                        progress_object["total"] += len(dirs)
                     if count_files:
                         progress_object["total"] += len(files)
+
+                if os.path.isfile(abs_path):
+                    progress_object["total"] += 1
             except Exception as e:
                 self.logger.error("Error get_total file %s , error %s" % (str(path), str(e)))
                 continue
 
         progress_object["total_done"] = True
-        self.logger.debug("done get_total()")
+        self.logger.debug("done get_total(), found %s objects" % progress_object.get("total"))
         return
 
     def uploading_progress(self, download_t, download_d, upload_t, upload_d):
-        percent_upload = 0
-        if upload_t != 0:
-            percent_upload = round(float(upload_d) / float(upload_t), 2)
+        try:
+            percent_upload = 0
+            if upload_t != 0:
+                percent_upload = round(float(upload_d) / float(upload_t), 2)
 
-        if percent_upload != self.operation_progress.get("previous_percent"):
-            self.operation_progress["previous_percent"] = percent_upload
-            total_percent = percent_upload + self.operation_progress.get("processed")
+            if percent_upload != self.operation_progress.get("previous_percent"):
+                if percent_upload == 0 and self.operation_progress.get("previous_percent") != 0:
+                    self.operation_progress["processed"] += 1
+                self.operation_progress["previous_percent"] = percent_upload
+                total_percent = percent_upload + self.operation_progress.get("processed")
 
-            percent = round(float(total_percent) /
-                            float(self.operation_progress.get("total")), 2)
-            progress = {
-                'percent': percent,
-                'text': str(int(percent * 100)) + '%'
-            }
+                percent = round(float(total_percent) /
+                                float(self.operation_progress.get("total")), 2)
+                progress = {
+                    'percent': percent,
+                    'text': str(int(percent * 100)) + '%'
+                }
 
-            self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
+                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
+        except Exception as ex:
+            self.logger.error("Error in MoveToWebDav uploading_progress(): %s, traceback = %s" %
+                              (str(ex), traceback.format_exc()))
