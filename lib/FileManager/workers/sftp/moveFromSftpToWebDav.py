@@ -217,5 +217,5 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
 
                 self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
         except Exception as ex:
-            self.logger.error("Error in MoveFromFtpToWebDav uploading_progress(): %s, traceback = %s" %
+            self.logger.error("Error in MoveFromSftpToWebDav uploading_progress(): %s, traceback = %s" %
                               (str(ex), traceback.format_exc()))
