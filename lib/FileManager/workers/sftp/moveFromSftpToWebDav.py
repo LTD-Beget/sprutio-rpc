@@ -19,19 +19,19 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
         self.target = target
         self.paths = paths
         self.overwrite = overwrite
+        self.operation_progress = {
+            "total_done": False,
+            "total": 0,
+            "operation_done": False,
+            "processed": 0,
+            "previous_percent": 0
+        }
 
     def run(self):
         try:
             self.preload()
             success_paths = []
             error_paths = []
-
-            operation_progress = {
-                "total_done": False,
-                "total": 0,
-                "operation_done": False,
-                "processed": 0
-            }
 
             source_path = self.source.get('path')
             target_path = self.target.get('path')
@@ -48,11 +48,8 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
 
             target_webdav = WebDavConnection.create(self.login, self.target.get('server_id'), self.logger)
             source_sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
-            t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
+            t_total = threading.Thread(target=self.get_total, args=(self.operation_progress, self.paths))
             t_total.start()
-
-            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
-            t_progress.start()
 
             for path in self.paths:
                 try:
@@ -66,10 +63,10 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
                             uploading_path += '/'
                             file_basename += '/'
 
-                        upload_result = target_webdav.upload(uploading_path, target_path, self.overwrite, file_basename)
+                        upload_result = target_webdav.upload(uploading_path, target_path, self.overwrite, file_basename,
+                                                             self.uploading_progress)
 
                         if upload_result['success']:
-                            operation_progress["processed"] += 1
                             success_paths.append(path)
                             shutil.rmtree(temp_path, True)
                             source_sftp.remove(path)
@@ -79,7 +76,7 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
                         "Error copy %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
                     error_paths.append(path)
 
-            operation_progress["operation_done"] = True
+            self.operation_progress["operation_done"] = True
 
             result = {
                 "success": success_paths,
@@ -107,18 +104,18 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
         if not os.path.exists(target_path):
             os.makedirs(target_path)
 
-        ftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+        sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
 
         success_paths = []
         error_paths = []
 
         for path in self.paths:
             try:
-                abs_path = ftp.path.abspath(path)
-                source_path = ftp.path.dirname(path)
-                file_basename = ftp.path.basename(abs_path)
+                abs_path = sftp.path.abspath(path)
+                source_path = sftp.path.dirname(path)
+                file_basename = sftp.path.basename(abs_path)
 
-                if ftp.isdir(abs_path):
+                if sftp.isdir(abs_path):
                     destination = os.path.join(target_path, file_basename)
 
                     if not os.path.exists(destination):
@@ -126,7 +123,7 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
                     else:
                         raise Exception("destination already exist")
 
-                    for current, dirs, files in ftp.ftp.walk(ftp.to_string(abs_path)):
+                    for current, dirs, files in sftp.ftp.walk(sftp.to_string(abs_path)):
                         current = current.encode("ISO-8859-1").decode("UTF-8")
                         relative_root = os.path.relpath(current, source_path)
 
@@ -144,7 +141,7 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
                             target_file_path = os.path.join(target_path, relative_root)
                             target_file = os.path.join(target_path, relative_root, f)
                             if not os.path.exists(target_file):
-                                download_result = ftp.download(source_file, target_file_path)
+                                download_result = sftp.download(source_file, target_file_path)
                                 if not download_result['success'] or len(
                                         download_result['file_list']['failed']) > 0:
                                     raise download_result['error'] if download_result[
@@ -153,11 +150,11 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
                             else:
                                 raise Exception("destination file already exists")
 
-                elif ftp.isfile(abs_path):
+                elif sftp.isfile(abs_path):
                     try:
                         target_file = os.path.join(target_path, file_basename)
                         if not os.path.exists(target_file):
-                            download_result = ftp.download(abs_path, target_path)
+                            download_result = sftp.download(abs_path, target_path)
                             if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
                                 raise download_result['error'] if download_result[
                                                                       'error'] is not None else Exception(
@@ -180,14 +177,16 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
 
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        source_webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
+        sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
         for path in paths:
             try:
-                abs_path = path
-                if count_dirs:
-                    progress_object["total"] += 1
+                abs_path = sftp.path.abspath(path)
 
-                for filename in source_webdav.listdir(abs_path):
+                for current, dirs, files in sftp.ftp.walk(sftp.to_string(abs_path)):
+                    if count_files:
+                        progress_object["total"] += len(files)
+
+                if sftp.isfile(abs_path):
                     progress_object["total"] += 1
             except Exception as e:
                 self.logger.error("Error get_total file %s , error %s" % (str(path), str(e)))
@@ -197,4 +196,26 @@ class MoveFromSftpToWebDav(BaseWorkerCustomer):
         self.logger.debug("done get_total()")
         return
 
+    def uploading_progress(self, download_t, download_d, upload_t, upload_d):
+        try:
+            percent_upload = 0
+            if upload_t != 0:
+                percent_upload = round(float(upload_d) / float(upload_t), 2)
 
+            if percent_upload != self.operation_progress.get("previous_percent"):
+                if percent_upload == 0 and self.operation_progress.get("previous_percent") != 0:
+                    self.operation_progress["processed"] += 1
+                self.operation_progress["previous_percent"] = percent_upload
+                total_percent = percent_upload + self.operation_progress.get("processed")
+
+                percent = round(float(total_percent) /
+                                float(self.operation_progress.get("total")), 2)
+                progress = {
+                    'percent': percent,
+                    'text': str(int(percent * 100)) + '%'
+                }
+
+                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
+        except Exception as ex:
+            self.logger.error("Error in MoveFromFtpToWebDav uploading_progress(): %s, traceback = %s" %
+                              (str(ex), traceback.format_exc()))
