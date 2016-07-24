@@ -2,7 +2,6 @@ from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.WebDavConnection import WebDavConnection
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.workers.progress_helper import update_progress
 import traceback
 import threading
 import time
@@ -51,7 +50,7 @@ class CopyFromWebDavToFtp(BaseWorkerCustomer):
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
-            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
+            t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
             t_progress.start()
 
             for path in self.paths:
@@ -114,14 +113,13 @@ class CopyFromWebDavToFtp(BaseWorkerCustomer):
 
             if os.path.isdir(read_file_path):
                 destination = ftp.path.join(target_path, file_basename)
-                self.make_directory_on_ftp(destination, ftp)
-                operation_progress["processed"] += 1
+                self.make_directory_on_ftp(destination, ftp, operation_progress)
 
                 for current, dirs, files in os.walk(read_file_path):
                     relative_root = os.path.relpath(current, read_path)
                     for d in dirs:
                         next_directory = ftp.path.join(destination, d)
-                        self.make_directory_on_ftp(next_directory, ftp)
+                        self.make_directory_on_ftp(next_directory, ftp, operation_progress)
                     for f in files:
                         source_file = os.path.join(current, f)
                         target_file_path = ftp.path.join(target_path, relative_root)
@@ -141,16 +139,22 @@ class CopyFromWebDavToFtp(BaseWorkerCustomer):
 
         return success_paths, error_paths
 
-    def make_directory_on_ftp(self, destination, ftp):
-        if not ftp.exists(destination):
-            ftp.mkdir(destination)
-        elif self.overwrite and ftp.exists(destination) and not ftp.isdir(destination):
-            ftp.remove(destination)
-            ftp.mkdir(destination)
-        elif not self.overwrite and ftp.exists(destination) and not ftp.isdir(destination):
-            raise Exception("destination is not a dir")
-        else:
-            pass
+    def make_directory_on_ftp(self, destination, ftp, operation_progress):
+        try:
+            if not ftp.exists(destination):
+                ftp.mkdir(destination)
+            elif self.overwrite and ftp.exists(destination) and not ftp.isdir(destination):
+                ftp.remove(destination)
+                ftp.mkdir(destination)
+            elif not self.overwrite and ftp.exists(destination) and not ftp.isdir(destination):
+                raise Exception("destination is not a dir")
+            else:
+                pass
+        except Exception as e:
+            self.logger.info("Cannot copy file %s , %s" % (destination, str(e)))
+            raise e
+        finally:
+            operation_progress["processed"] += 1
 
     def upload_file_to_ftp(self, read_file_path, target_path, target_file, ftp, operation_progress):
         try:
@@ -173,7 +177,6 @@ class CopyFromWebDavToFtp(BaseWorkerCustomer):
                         "Upload error")
             else:
                 pass
-            operation_progress["processed"] += 1
         except Exception as e:
             self.logger.info("Cannot copy file %s , %s" % (target_file, str(e)))
             raise e
@@ -193,22 +196,47 @@ class CopyFromWebDavToFtp(BaseWorkerCustomer):
 
         return download_result
 
-    def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
-        self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        source_webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
+    def get_total(self, progress_object, paths, count_files=True):
+        self.logger.debug("start get_total() files = %s" % count_files)
+        webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
         for path in paths:
             try:
-                abs_path = path
-                if count_dirs:
-                    progress_object["total"] += 1
+                self.recursive_total(webdav, path, progress_object)
 
-                for files in source_webdav.listdir(abs_path):
-                    progress_object["total"] += 1
             except Exception as e:
                 self.logger.error("Error get_total file %s , error %s" % (str(path), str(e)))
                 continue
 
         progress_object["total_done"] = True
-        self.logger.debug("done get_total()")
+        self.logger.debug("done get_total(), found %s objects" % progress_object.get("total"))
         return
 
+    def recursive_total(self, webdav, path, progress_object):
+        progress_object["total"] += 1
+        if webdav.isdir(path):
+            for file in webdav.listdir(path):
+                self.recursive_total(webdav, file, progress_object)
+
+    def update_progress(self, progress_object):
+        self.logger.debug("start update_progress()")
+        next_tick = time.time() + REQUEST_DELAY
+
+        self.on_running(self.status_id, pid=self.pid, pname=self.name)
+
+        while not progress_object.get("operation_done"):
+            if time.time() > next_tick and progress_object.get("total_done"):
+                percentage = round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2)
+                progress = {
+                    'percent': percentage,
+                    'text': str(int(percentage * 100)) + '%'
+                }
+
+                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
+                next_tick = time.time() + REQUEST_DELAY
+                time.sleep(REQUEST_DELAY)
+            elif time.time() > next_tick:
+                next_tick = time.time() + REQUEST_DELAY
+                time.sleep(REQUEST_DELAY)
+
+        self.logger.debug("done update_progress()")
+        return
