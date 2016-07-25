@@ -1,7 +1,6 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.WebDavConnection import WebDavConnection
 from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.workers.progress_helper import update_progress
 import traceback
 import threading
 import time
@@ -18,19 +17,19 @@ class MoveBetweenWebDav(BaseWorkerCustomer):
         self.target = target
         self.paths = paths
         self.overwrite = overwrite
+        self.operation_progress = {
+            "total_done": False,
+            "total": 0,
+            "operation_done": False,
+            "processed": 0,
+            "previous_percent": 0
+        }
 
     def run(self):
         try:
             self.preload()
             success_paths = []
             error_paths = []
-
-            operation_progress = {
-                "total_done": False,
-                "total": 0,
-                "operation_done": False,
-                "processed": 0
-            }
 
             source_path = self.source.get('path')
             target_path = self.target.get('path')
@@ -47,11 +46,8 @@ class MoveBetweenWebDav(BaseWorkerCustomer):
 
             source_webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
             target_webdav = WebDavConnection.create(self.login, self.target.get('server_id'), self.logger)
-            t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
+            t_total = threading.Thread(target=self.get_total, args=(self.operation_progress, self.paths))
             t_total.start()
-
-            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
-            t_progress.start()
 
             for path in self.paths:
                 try:
@@ -68,7 +64,8 @@ class MoveBetweenWebDav(BaseWorkerCustomer):
                         if not os.path.exists(read_path):
                             raise OSError("File not downloaded")
 
-                        upload_result = self.upload_file_to_webdav(read_path, target_path, filename, operation_progress, target_webdav)
+                        upload_result = self.upload_file_to_webdav(read_path, target_path, filename,
+                                                                   target_webdav)
                         if upload_result['success']:
                             success_paths.append(path)
                             shutil.rmtree(temp_path, True)
@@ -79,7 +76,7 @@ class MoveBetweenWebDav(BaseWorkerCustomer):
                         "Error copy %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
                     error_paths.append(path)
 
-            operation_progress["operation_done"] = True
+            self.operation_progress["operation_done"] = True
 
             result = {
                 "success": success_paths,
@@ -103,15 +100,12 @@ class MoveBetweenWebDav(BaseWorkerCustomer):
 
             self.on_error(self.status_id, result, pid=self.pid, pname=self.name)
 
-    def upload_file_to_webdav(self, read_path, write_directory, filename, operation_progress, webdav):
+    def upload_file_to_webdav(self, read_path, write_directory, filename, webdav):
         try:
-            upload_result = webdav.upload(read_path, write_directory, self.overwrite, filename)
-            operation_progress["processed"] += 1
+            upload_result = webdav.upload(read_path, write_directory, self.overwrite, filename, self.uploading_progress)
         except Exception as e:
             self.logger.info("Cannot copy file %s , %s" % (read_path, str(e)))
             raise e
-        finally:
-            operation_progress["processed"] += 1
 
         return upload_result
 
@@ -128,22 +122,48 @@ class MoveBetweenWebDav(BaseWorkerCustomer):
 
         return download_result
 
-    def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
-        self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        source_webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
+    def get_total(self, progress_object, paths, count_files=True):
+        self.logger.debug("start get_total() files = %s" % count_files)
+        webdav = WebDavConnection.create(self.login, self.source.get('server_id'), self.logger)
         for path in paths:
             try:
-                abs_path = path
-                if count_dirs:
-                    progress_object["total"] += 1
+                self.recursive_total(webdav, path, progress_object)
 
-                for files in source_webdav.listdir(abs_path):
-                    progress_object["total"] += 1
             except Exception as e:
                 self.logger.error("Error get_total file %s , error %s" % (str(path), str(e)))
                 continue
 
         progress_object["total_done"] = True
-        self.logger.debug("done get_total()")
+        self.logger.debug("done get_total(), found %s files" % progress_object.get("total"))
         return
 
+    def recursive_total(self, webdav, path, progress_object):
+        if webdav.isfile(path):
+            progress_object["total"] += 1
+        else:
+            for file in webdav.listdir(path):
+                self.recursive_total(webdav, file, progress_object)
+
+    def uploading_progress(self, download_t, download_d, upload_t, upload_d):
+        try:
+            percent_upload = 0
+            if upload_t != 0:
+                percent_upload = round(float(upload_d) / float(upload_t), 2)
+
+            if percent_upload != self.operation_progress.get("previous_percent"):
+                if percent_upload == 0 and self.operation_progress.get("previous_percent") != 0:
+                    self.operation_progress["processed"] += 1
+                self.operation_progress["previous_percent"] = percent_upload
+                total_percent = percent_upload + self.operation_progress.get("processed")
+
+                percent = round(float(total_percent) /
+                                float(self.operation_progress.get("total")), 2)
+                progress = {
+                    'percent': percent,
+                    'text': str(int(percent * 100)) + '%'
+                }
+
+                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
+        except Exception as ex:
+            self.logger.error("Error in MoveFromFtpToWebDav uploading_progress(): %s, traceback = %s" %
+                              (str(ex), traceback.format_exc()))
