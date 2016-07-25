@@ -404,7 +404,7 @@ class HomeController(Controller):
             elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.SFTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyToSftp, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.PUBLIC_WEBDAV:
+            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.WEBDAV:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyToWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
             else:
@@ -448,7 +448,7 @@ class HomeController(Controller):
             elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.SFTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveToSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.PUBLIC_WEBDAV:
+            elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.WEBDAV:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveToWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             else:

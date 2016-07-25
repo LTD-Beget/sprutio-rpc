@@ -131,7 +131,7 @@ class InitSession(BaseWorkerCustomer):
 
             return actions
         
-        if self.session_type == Module.PUBLIC_WEBDAV:
+        if self.session_type == Module.WEBDAV:
             self.logger.info("WebDav Actions preload")
             actions = {
                 Action.ANALYZE_SIZE: False,
@@ -253,7 +253,7 @@ class InitSession(BaseWorkerCustomer):
 
             return listing
 
-        if self.session_type == Module.PUBLIC_WEBDAV:
+        if self.session_type == Module.WEBDAV:
             self.logger.info("WebDav Listing preload")
             path = self.path if self.path is not None else '/'
             abs_path = os.path.abspath(path)

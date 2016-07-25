@@ -91,4 +91,4 @@ class Module(object):
     HOME = "home"
     FTP = "ftp"
     SFTP = "sftp"
-    PUBLIC_WEBDAV = "public_webdav"
+    WEBDAV = "webdav"

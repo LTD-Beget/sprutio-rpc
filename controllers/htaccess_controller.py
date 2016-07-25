@@ -51,7 +51,7 @@ class HtaccessController(Controller):
                 "params": byte_to_unicode_dict(params),
                 "session": session
             })
-        elif session.get('type') == FM.Module.PUBLIC_FTP:
+        elif session.get('type') == FM.Module.FTP:
             return self.get_process_data(SaveRulesFtp, {
                 "login": login.decode('UTF-8'),
                 "password": password.decode('UTF-8'),

@@ -327,20 +327,20 @@ class WebdavController(Controller):
                 "overwrite": overwrite
             }
 
-            if source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.HOME:
+            if source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_FTP:
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromWebDavToFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.SFTP:
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.SFTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromWebDavToSftp, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') != target.get('server_id')):
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyBetweenWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
@@ -376,20 +376,20 @@ class WebdavController(Controller):
                 "overwrite": overwrite
             }
 
-            if source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.HOME:
+            if source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_FTP:
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromWebDavToFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.SFTP:
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.SFTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromWebDavToSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif (source.get('type') == FM.Module.PUBLIC_WEBDAV and target.get('type') == FM.Module.PUBLIC_WEBDAV) and (
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') != target.get('server_id')):
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveBetweenWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))

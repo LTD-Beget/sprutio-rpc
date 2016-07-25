@@ -455,7 +455,7 @@ class SftpController(Controller):
                 self.logger.info('###################################################3333333')
                 self.logger.info(p)
                 self.logger.info('###################################################3333333')
-            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.PUBLIC_WEBDAV:
+            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.WEBDAV:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyFromSftpToWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
             elif (source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.SFTP) and (
@@ -503,7 +503,7 @@ class SftpController(Controller):
             elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromSftpToFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.PUBLIC_WEBDAV:
+            elif source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.WEBDAV:
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveFromSftpToWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             elif (source.get('type') == FM.Module.SFTP and target.get('type') == FM.Module.SFTP) and (
