@@ -15,7 +15,7 @@ class RenameFile(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
 
             self.logger.debug("FM NewFile worker run(), source_abs_path = %s" % self.source_path)
             self.logger.debug("FM NewFile worker run(), target_abs_path = %s" % self.target_path)

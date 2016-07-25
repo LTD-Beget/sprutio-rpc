@@ -23,7 +23,7 @@ class CreateArchive(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             abs_archive_path = os.path.join(TMP_DIR, self.login, self.random_hash())
             archive_dir = os.path.dirname(abs_archive_path)
             if not os.path.exists(archive_dir):
@@ -121,7 +121,7 @@ class CreateArchive(BaseWorkerCustomer):
         return archive_type
 
     def make_entry(self, f, base_path):
-        sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+        sftp = self.get_sftp_connection(self.session)
         entry = libarchive.Entry(encoding='utf-8')
         st = sftp.stat(f)
         entry.pathname = base_path

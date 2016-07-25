@@ -1,9 +1,5 @@
 import os
-import stat
-import uuid
-import codecs
 import ftplib
-import pprint
 import traceback
 import webdav.client as wc
 import webdav.urn as urn

@@ -4,12 +4,9 @@ from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
 from lib.FileManager.workers.progress_helper import update_progress
 import os
-import shutil
 import traceback
 import threading
 import time
-
-from config.main import TMP_DIR
 
 
 class MoveFromSftpToFtp(BaseWorkerCustomer):
@@ -45,8 +42,8 @@ class MoveFromSftpToFtp(BaseWorkerCustomer):
                 raise Exception("Target path empty")
 
             self.logger.info("MoveFromSftpToFtp process run source = %s , target = %s" % (source_path, target_path))
-            sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
-            ftp = FTPConnection.create(self.login, self.target.get('server_id'), self.logger)
+            sftp = Sself.get_ftp_connection(self.source)
+            ftp = self.get_ftp_connection(self.target)
 
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
@@ -163,7 +160,7 @@ class MoveFromSftpToFtp(BaseWorkerCustomer):
 
         for path in paths:
             try:
-                sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+                sftp = Sself.get_ftp_connection(self.source)
                 abs_path = path
 
                 if count_dirs:

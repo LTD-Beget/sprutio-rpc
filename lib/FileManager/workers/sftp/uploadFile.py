@@ -33,7 +33,7 @@ class UploadFile(BaseWorkerCustomer):
         try:
             self._prepare()
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             self.logger.info("SFTP UploadFile process run")
 
             target_file = os.path.join(self.path, os.path.basename(self.file_path))

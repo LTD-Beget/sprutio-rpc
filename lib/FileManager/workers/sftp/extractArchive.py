@@ -47,7 +47,7 @@ class ExtractArchive(BaseWorkerCustomer):
             if not os.path.exists(self.tmp_dir):
                 os.makedirs(self.tmp_dir)
 
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
 
             abs_extract_path = self.extract_path
 

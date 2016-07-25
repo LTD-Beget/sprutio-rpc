@@ -18,7 +18,7 @@ class CreateCopy(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             self.logger.info("CreateCopy sftp process run")
 
             # Временная хеш таблица для директорий по которым будем делать листинг

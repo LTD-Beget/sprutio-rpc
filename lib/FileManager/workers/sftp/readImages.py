@@ -59,7 +59,7 @@ class ReadImages(BaseWorkerCustomer):
             self.on_error(result)
 
     def copy_files_to_tmp(self, target_path):
-        sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+        sftp = self.get_sftp_connection(self.session)
         if not os.path.exists(target_path):
             os.makedirs(target_path)
 

@@ -21,7 +21,7 @@ class CopyFromSftpToFtp(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+            sftp = Sself.get_ftp_connection(self.source)
 
             success_paths = []
             error_paths = []
@@ -43,7 +43,7 @@ class CopyFromSftpToFtp(BaseWorkerCustomer):
                 raise Exception("Target path empty")
 
             self.logger.info("CopyFromSftpToFtp process run source = %s , target = %s" % (source_path, target_path))
-            ftp = FTPConnection.create(self.login, self.target.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.target)
 
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
@@ -159,7 +159,7 @@ class CopyFromSftpToFtp(BaseWorkerCustomer):
 
         for path in paths:
             try:
-                sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+                sftp = Sself.get_ftp_connection(self.source)
                 abs_path = path
 
                 if count_dirs:

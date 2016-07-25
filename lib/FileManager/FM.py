@@ -89,6 +89,6 @@ class Action(object):
 # Aliases for FM modules
 class Module(object):
     HOME = "home"
-    PUBLIC_FTP = "public_ftp"
+    FTP = "ftp"
     SFTP = "sftp"
     PUBLIC_WEBDAV = "public_webdav"

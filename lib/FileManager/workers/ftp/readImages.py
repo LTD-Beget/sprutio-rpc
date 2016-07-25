@@ -62,7 +62,7 @@ class ReadImages(BaseWorkerCustomer):
         if not os.path.exists(target_path):
             os.makedirs(target_path)
 
-        ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+        ftp = self.get_ftp_connection(self.session)
 
         success_paths = []
         error_paths = []

@@ -22,7 +22,7 @@ class FindFiles(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            sftp = self.get_sftp_connection(self.session)
             result = []
 
             abs_path = self.path

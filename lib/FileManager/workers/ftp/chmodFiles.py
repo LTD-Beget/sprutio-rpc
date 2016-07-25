@@ -39,7 +39,7 @@ class ChmodFiles(BaseWorkerCustomer):
             recursive_dirs = False
             recursive_files = False
 
-            ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.session)
 
             if recursive:
                 recursive_dirs = False if self.params.get("recursive_mode") == 'files' else True
@@ -128,7 +128,7 @@ class ChmodFiles(BaseWorkerCustomer):
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
 
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+        ftp = self.get_ftp_connection(self.session)
         for path in paths:
             try:
                 abs_path = ftp.path.abspath(path)

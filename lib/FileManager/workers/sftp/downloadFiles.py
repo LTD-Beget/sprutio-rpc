@@ -156,7 +156,7 @@ class DownloadFiles(BaseWorkerCustomer):
         success_paths = []
         error_paths = []
 
-        sftp = SFTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+        sftp = self.get_sftp_connection(self.session)
         for path in self.paths:
             try:
                 if sftp.rsync_from(path, target_path):
