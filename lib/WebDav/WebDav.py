@@ -134,25 +134,6 @@ class WebDav:
                 value = value.encode("ISO-8859-1")
         return value
 
-    @staticmethod
-    def to_string(value):
-        if isinstance(value, str):
-            try:
-                value = value.encode("utf-8")
-            except UnicodeDecodeError:
-                value = value.encode("ISO-8859-1")
-
-        if isinstance(value, bytes):
-            try:
-                value = value.decode("ISO-8859-1")
-            except UnicodeDecodeError:
-                try:
-                    value = value.decode("ISO-8859-1")
-                except UnicodeDecodeError:
-                    value = value.decode("utf-8", errors="replace"),
-
-        return value
-
     def size(self, path):
         try:
             return self.webdavClient.info(path)['size']
@@ -284,7 +265,7 @@ class WebDav:
 
             try:
                 self.logger.debug("Uploading target_path=%s, source=%s" % (target_path, source))
-                self.webdavClient.upload(self.to_string(target_path), source, operation_progress)
+                self.webdavClient.upload(target_path, source, operation_progress)
             except Exception as e:
                 failed.append(source)
                 self.logger.error("Error in WebDav upload(): %s, traceback = %s" % (str(e), traceback.format_exc()))
