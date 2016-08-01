@@ -21,7 +21,7 @@ class CopyFromSftpToFtp(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            sftp = Sself.get_ftp_connection(self.source)
+            sftp = self.get_sftp_connection(self.source)
 
             success_paths = []
             error_paths = []
@@ -159,7 +159,7 @@ class CopyFromSftpToFtp(BaseWorkerCustomer):
 
         for path in paths:
             try:
-                sftp = Sself.get_ftp_connection(self.source)
+                sftp = self.get_sftp_connection(self.source)
                 abs_path = path
 
                 if count_dirs:

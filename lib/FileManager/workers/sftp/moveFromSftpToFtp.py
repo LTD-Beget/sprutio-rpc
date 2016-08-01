@@ -42,7 +42,7 @@ class MoveFromSftpToFtp(BaseWorkerCustomer):
                 raise Exception("Target path empty")
 
             self.logger.info("MoveFromSftpToFtp process run source = %s , target = %s" % (source_path, target_path))
-            sftp = Sself.get_ftp_connection(self.source)
+            sftp = self.get_sftp_connection(self.source)
             ftp = self.get_ftp_connection(self.target)
 
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
@@ -160,7 +160,7 @@ class MoveFromSftpToFtp(BaseWorkerCustomer):
 
         for path in paths:
             try:
-                sftp = Sself.get_ftp_connection(self.source)
+                sftp = self.get_sftp_connection(self.source)
                 abs_path = path
 
                 if count_dirs:

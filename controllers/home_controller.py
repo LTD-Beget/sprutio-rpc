@@ -413,8 +413,6 @@ class HomeController(Controller):
             else:
                 raise Exception("Unable to get worker for these source and target")
 
-            raise Exception("some text")
-
             p.start()
             return {"error": False}
 

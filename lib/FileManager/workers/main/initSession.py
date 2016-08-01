@@ -248,7 +248,7 @@ class InitSession(BaseWorkerCustomer):
         if self.session_type == Module.SFTP:
             self.logger.info("SFTP Listing preload")
             path = self.path if self.path is not None else '.'
-            sftp_connection = self.get_ftp_connection(self.session)
+            sftp_connection = self.get_sftp_connection(self.session)
             listing = sftp_connection.list(path=path)
 
             return listing
