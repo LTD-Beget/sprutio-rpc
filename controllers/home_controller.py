@@ -396,8 +396,6 @@ class HomeController(Controller):
             }
 
             if source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.HOME:
-                if target.get('path') in params.get('paths'):
-                    raise Exception("Wrong path condition")
                 self.logger.debug("params=%s" % params)
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, CopyLocal, status_id.decode('UTF-8'), FM.Action.COPY, params))
@@ -443,8 +441,6 @@ class HomeController(Controller):
             }
 
             if source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.HOME:
-                if target.get('path') in params.get('paths'):
-                    raise Exception("Wrong path condition")
                 p = Process(target=self.run_subprocess,
                             args=(self.logger, MoveLocal, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             elif source.get('type') == FM.Module.HOME and target.get('type') == FM.Module.FTP:
