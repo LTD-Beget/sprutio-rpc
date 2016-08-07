@@ -108,61 +108,7 @@ class CopyFromSftpToWebDav(BaseWorkerCustomer):
 
         for path in self.paths:
             try:
-                abs_path = sftp.path.abspath(path)
-                source_path = sftp.path.dirname(path)
-                file_basename = sftp.path.basename(abs_path)
-
-                if sftp.isdir(abs_path):
-                    destination = os.path.join(target_path, file_basename)
-
-                    if not os.path.exists(destination):
-                        os.makedirs(destination)
-                    else:
-                        raise Exception("destination already exist")
-
-                    for current, dirs, files in sftp.ftp.walk(sftp.to_string(abs_path)):
-                        current = current.encode("ISO-8859-1").decode("UTF-8")
-                        relative_root = os.path.relpath(current, source_path)
-
-                        for d in dirs:
-                            d = d.encode("ISO-8859-1").decode("UTF-8")
-                            target_dir = os.path.join(target_path, relative_root, d)
-                            if not os.path.exists(target_dir):
-                                os.makedirs(target_dir)
-                            else:
-                                raise Exception("destination dir already exists")
-
-                        for f in files:
-                            f = f.encode("ISO-8859-1").decode("UTF-8")
-                            source_file = os.path.join(current, f)
-                            target_file_path = os.path.join(target_path, relative_root)
-                            target_file = os.path.join(target_path, relative_root, f)
-                            if not os.path.exists(target_file):
-                                download_result = sftp.download(source_file, target_file_path)
-                                if not download_result['success'] or len(
-                                        download_result['file_list']['failed']) > 0:
-                                    raise download_result['error'] if download_result[
-                                                                          'error'] is not None else Exception(
-                                            "Download error")
-                            else:
-                                raise Exception("destination file already exists")
-
-                elif sftp.isfile(abs_path):
-                    try:
-                        target_file = os.path.join(target_path, file_basename)
-                        if not os.path.exists(target_file):
-                            download_result = sftp.download(abs_path, target_path)
-                            if not download_result['success'] or len(download_result['file_list']['failed']) > 0:
-                                raise download_result['error'] if download_result[
-                                                                      'error'] is not None else Exception(
-                                        "Download error")
-                        else:
-                            raise Exception("destination file already exists")
-
-                    except Exception as e:
-                        self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))
-                        raise e
-
+                sftp.rsync_from(path, target_path)
                 success_paths.append(path)
 
             except Exception as e:
@@ -177,9 +123,9 @@ class CopyFromSftpToWebDav(BaseWorkerCustomer):
         sftp = SFTPConnection.create(self.login, self.source.get('server_id'), self.logger)
         for path in paths:
             try:
-                abs_path = sftp.path.abspath(path)
+                abs_path = path
 
-                for current, dirs, files in sftp.ftp.walk(sftp.to_string(abs_path)):
+                for current, dirs, files in sftp.walk(abs_path):
                     if count_files:
                         progress_object["total"] += len(files)
 

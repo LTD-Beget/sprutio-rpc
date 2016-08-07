@@ -113,23 +113,23 @@ class CopyFromWebDavToSftp(BaseWorkerCustomer):
             read_file_path = os.path.join(read_path, file_basename)
 
             if os.path.isdir(read_file_path):
-                destination = sftp.path.join(target_path, file_basename)
+                destination = os.path.join(target_path, file_basename)
                 self.make_directory_on_sftp(destination, sftp, operation_progress)
 
                 for current, dirs, files in os.walk(read_file_path):
                     relative_root = os.path.relpath(current, read_path)
                     for d in dirs:
-                        next_directory = sftp.path.join(destination, d)
-                        self.make_directory_on_ftp(next_directory, sftp, operation_progress)
+                        next_directory = os.path.join(destination, d)
+                        self.make_directory_on_sftp(next_directory, sftp, operation_progress)
                     for f in files:
                         source_file = os.path.join(current, f)
-                        target_file_path = sftp.path.join(target_path, relative_root)
-                        target_file = sftp.path.join(target_file_path, f)
-                        self.upload_file_to_sftp(source_file, target_file_path, target_file, sftp, operation_progress)
+                        target_file_path = os.path.join(target_path, relative_root)
+                        target_file = os.path.join(target_file_path, f)
+                        self.upload_file_to_sftp(source_file, target_file, sftp, operation_progress)
 
             elif os.path.isfile(read_file_path):
-                target_file = sftp.path.join(target_path, file_basename)
-                self.upload_file_to_sftp(read_file_path, target_path, target_file, sftp, operation_progress)
+                target_file = os.path.join(target_path, file_basename)
+                self.upload_file_to_sftp(read_file_path, target_file, sftp, operation_progress)
 
             success_paths.append(path)
 
@@ -157,25 +157,16 @@ class CopyFromWebDavToSftp(BaseWorkerCustomer):
         finally:
             operation_progress["processed"] += 1
 
-    def upload_file_to_sftp(self, read_file_path, target_path, target_file, sftp, operation_progress):
+    def upload_file_to_sftp(self, read_file_path, target_file, sftp, operation_progress):
         try:
             if not sftp.exists(target_file):
-                upload_result = sftp.upload(read_file_path, target_path)
-                if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
-                    raise upload_result['error'] if upload_result['error'] is not None else Exception(
-                        "Upload error")
+                sftp.sftp.put(read_file_path, target_file)
             elif self.overwrite and sftp.exists(target_file) and not sftp.isdir(target_file):
                 sftp.remove(target_file)
-                upload_result = sftp.upload(read_file_path, target_path)
-                if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
-                    raise upload_result['error'] if upload_result['error'] is not None else Exception(
-                        "Upload error")
+                sftp.sftp.put(read_file_path, target_file)
             elif self.overwrite and sftp.isdir(target_file):
-                sftp.remove(target_file)
-                upload_result = sftp.upload(read_file_path, target_path)
-                if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
-                    raise upload_result['error'] if upload_result['error'] is not None else Exception(
-                        "Upload error")
+                sftp.rmtree(target_file)
+                sftp.sftp.put(read_file_path, target_file)
             else:
                 pass
         except Exception as e:
