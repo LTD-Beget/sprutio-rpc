@@ -1,75 +1,41 @@
+from beget_msgpack import Controller
 import pprint
 import select
-import traceback
-from multiprocessing import Pipe, Process
+from lib.FileManager.workers.webdav.createWebDavConnection import CreateWebDavConnection
+from lib.FileManager.workers.webdav.removeWebDavConnection import RemoveWebDavConnection
+from lib.FileManager.workers.webdav.updateWebDavConnection import UpdateWebDavConnection
 
-from beget_msgpack import Controller
+from lib.FileManager.workers.webdav.listFiles import ListFiles
+from lib.FileManager.workers.webdav.makeDir import MakeDir
+from lib.FileManager.workers.webdav.removeFiles import RemoveFiles
+from lib.FileManager.workers.webdav.downloadFiles import DownloadFiles
+from lib.FileManager.workers.webdav.uploadFile import UploadFile
+from lib.FileManager.workers.webdav.renameFile import RenameFile
+from lib.FileManager.workers.webdav.readImages import ReadImages
+from lib.FileManager.workers.webdav.readFile import ReadFile
+from lib.FileManager.workers.webdav.writeFile import WriteFile
+from lib.FileManager.workers.webdav.copyWebDav import CopyWebDav
+from lib.FileManager.workers.webdav.createCopy import CreateCopy
+from lib.FileManager.workers.webdav.copyFromWebDav import CopyFromWebDav
+from lib.FileManager.workers.webdav.moveFromWebDav import MoveFromWebDav
+from lib.FileManager.workers.webdav.moveWebDav import MoveWebDav
+from lib.FileManager.workers.webdav.copyBetweenWebDav import CopyBetweenWebDav
+from lib.FileManager.workers.webdav.moveBetweenWebDav import MoveBetweenWebDav
+from lib.FileManager.workers.webdav.copyFromWebDavToFtp import CopyFromWebDavToFtp
+from lib.FileManager.workers.webdav.moveFromWebDavToFtp import MoveFromWebDavToFtp
+from lib.FileManager.workers.webdav.copyFromWebDavToSftp import CopyFromWebDavToSftp
+from lib.FileManager.workers.webdav.moveFromWebDavToSftp import MoveFromWebDavToSftp
 
 from base.exc import Error
 from lib.FileManager import FM
+from multiprocessing import Pipe, Process
 from lib.FileManager.OperationStatus import OperationStatus
-from lib.FileManager.workers.ftp.chmodFiles import ChmodFiles
-from lib.FileManager.workers.ftp.copyBetweenFtp import CopyBetweenFtp
-from lib.FileManager.workers.ftp.copyFromFtp import CopyFromFtp
-from lib.FileManager.workers.ftp.moveFromFtpToSftp import MoveFromFtpToSftp
-from lib.FileManager.workers.ftp.copyFtp import CopyFtp
-from lib.FileManager.workers.ftp.createConnection import CreateConnection
-from lib.FileManager.workers.ftp.createCopy import CreateCopy
-from lib.FileManager.workers.ftp.downloadFiles import DownloadFiles
-from lib.FileManager.workers.ftp.listFiles import ListFiles
-from lib.FileManager.workers.ftp.makeDir import MakeDir
-from lib.FileManager.workers.ftp.moveBetweenFtp import MoveBetweenFtp
-from lib.FileManager.workers.ftp.moveFromFtp import MoveFromFtp
-from lib.FileManager.workers.ftp.copyFromFtpToSftp import CopyFromFtpToSftp
-from lib.FileManager.workers.ftp.copyFromFtpToWebDav import CopyFromFtpToWebDav
-from lib.FileManager.workers.ftp.moveFromFtpToWebDav import MoveFromFtpToWebDav
-from lib.FileManager.workers.ftp.moveFtp import MoveFtp
-from lib.FileManager.workers.ftp.newFile import NewFile
-from lib.FileManager.workers.ftp.readFile import ReadFile
-from lib.FileManager.workers.ftp.readImages import ReadImages
-from lib.FileManager.workers.ftp.removeConnection import RemoveConnection
-from lib.FileManager.workers.ftp.removeFiles import RemoveFiles
-from lib.FileManager.workers.ftp.renameFile import RenameFile
-from lib.FileManager.workers.ftp.updateConnection import UpdateConnection
-from lib.FileManager.workers.ftp.uploadFile import UploadFile
-from lib.FileManager.workers.ftp.writeFile import WriteFile
+import traceback
 from misc.helpers import byte_to_unicode_dict, byte_to_unicode_list
 
 
-class FtpController(Controller):
-    def action_create_connection(self, login, password, host, port, ftp_user, ftp_password):
-
-        return self.get_process_data(CreateConnection, {
-            "login": login.decode('UTF-8'),
-            "password": password.decode('UTF-8'),
-            "host": host.decode('UTF-8'),
-            "port": port,
-            "ftp_user": ftp_user.decode('UTF-8'),
-            "ftp_password": ftp_password.decode('UTF-8')
-        })
-
-    def action_edit_connection(self, login, password, connection_id, host, port, ftp_user, ftp_password):
-
-        return self.get_process_data(UpdateConnection, {
-            "login": login.decode('UTF-8'),
-            "password": password.decode('UTF-8'),
-            "connection_id": connection_id,
-            "host": host.decode('UTF-8'),
-            "port": port,
-            "ftp_user": ftp_user.decode('UTF-8'),
-            "ftp_password": ftp_password.decode('UTF-8')
-        })
-
-    def action_remove_connection(self, login, password, connection_id):
-
-        return self.get_process_data(RemoveConnection, {
-            "login": login.decode('UTF-8'),
-            "password": password.decode('UTF-8'),
-            "connection_id": connection_id
-        })
-
+class WebdavController(Controller):
     def action_list_files(self, login, password, path, session):
-
         return self.get_process_data(ListFiles, {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
@@ -86,12 +52,13 @@ class FtpController(Controller):
             "session": byte_to_unicode_dict(session)
         })
 
-    def action_new_file(self, login, password, path, session):
+    def action_rename_file(self, login, password, source_path, target_path, session):
 
-        return self.get_process_data(NewFile, {
+        return self.get_process_data(RenameFile, {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
-            "path": path.decode("UTF-8"),
+            "source_path": source_path.decode("UTF-8"),
+            "target_path": target_path.decode("UTF-8"),
             "session": byte_to_unicode_dict(session)
         })
 
@@ -104,25 +71,14 @@ class FtpController(Controller):
             "session": byte_to_unicode_dict(session)
         })
 
-    def action_write_file(self, login, password, path, content, encoding, session):
+    def action_create_connection(self, login, password, host, webdav_user, webdav_password):
 
-        return self.get_process_data(WriteFile, {
+        return self.get_process_data(CreateWebDavConnection, {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
-            "path": path.decode("UTF-8"),
-            "content": content.decode('UTF-8'),
-            "encoding": encoding.decode('UTF-8'),
-            "session": byte_to_unicode_dict(session)
-        })
-
-    def action_rename_file(self, login, password, source_path, target_path, session):
-
-        return self.get_process_data(RenameFile, {
-            "login": login.decode('UTF-8'),
-            "password": password.decode('UTF-8'),
-            "source_path": source_path.decode("UTF-8"),
-            "target_path": target_path.decode("UTF-8"),
-            "session": byte_to_unicode_dict(session)
+            "host": host.decode('UTF-8'),
+            "webdav_user": webdav_user.decode('UTF-8'),
+            "webdav_password": webdav_password.decode('UTF-8')
         })
 
     def action_download_files(self, login, password, paths, mode, session):
@@ -155,9 +111,69 @@ class FtpController(Controller):
             "session": byte_to_unicode_dict(session)
         }, timeout=7200)
 
+    def action_edit_connection(self, login, password, connection_id, host, webdav_user, webdav_password):
+
+        return self.get_process_data(UpdateWebDavConnection, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "connection_id": connection_id,
+            "host": host.decode('UTF-8'),
+            "webdav_user": webdav_user.decode('UTF-8'),
+            "webdav_password": webdav_password.decode('UTF-8')
+        })
+
+    def action_remove_connection(self, login, password, connection_id):
+
+        return self.get_process_data(RemoveWebDavConnection, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "connection_id": connection_id
+        })
+
+    def get_process_data(self, process_object, process_kwargs, timeout=30):
+
+        print(" === before start queue === ")
+        parent_conn, child_conn = Pipe()
+        logger = self.logger
+
+        def on_success(data=None):
+            logger.debug("Process on_success()")
+            child_conn.send(data)
+
+        def on_error(data=None):
+            logger.debug("Process on_error() data: %s" % pprint.pformat(data))
+            child_conn.send(data)
+
+        kwargs = {
+            "logger": self.logger,
+            "on_error": on_error,
+            "on_success": on_success
+        }
+
+        kwargs.update(process_kwargs)
+
+        process = process_object(**kwargs)
+        process.start()
+        ready = select.select([parent_conn], [], [], timeout)  # timeout 30sec
+        if ready[0]:
+            result = parent_conn.recv()
+            process.join()
+        else:
+            result = {
+                "error": True,
+                "message": "Request timeout"
+            }
+            if process.is_alive():
+                self.logger.error('Terminate child by timeout with pid: %s', process.pid)
+                process.terminate()
+
+        return self.on_finish(process, result)
+
     @staticmethod
     def run_subprocess(logger, worker_object, status_id, name, params):
-        logger.info("FM call FTP long action %s %s %s" % (name, pprint.pformat(status_id), pprint.pformat(params.get("login"))))
+        logger.info(
+                "FM call WebDav long action %s %s %s" % (
+                    name, pprint.pformat(status_id), pprint.pformat(params.get("login"))))
 
         def async_check_operation(op_status_id):
             operation = OperationStatus.load(op_status_id)
@@ -257,6 +273,16 @@ class FtpController(Controller):
 
             async_on_error(status_id, result)
 
+    def action_write_file(self, login, password, path, content, encoding, session):
+        return self.get_process_data(WriteFile, {
+            "login": login.decode('UTF-8'),
+            "password": password.decode('UTF-8'),
+            "path": path.decode("UTF-8"),
+            "content": content.decode('UTF-8'),
+            "encoding": encoding.decode('UTF-8'),
+            "session": byte_to_unicode_dict(session)
+        })
+
     def action_remove_files(self, login, password, status_id, paths, session):
         try:
             self.logger.info("FM starting subprocess worker remove_files %s %s", pprint.pformat(status_id),
@@ -280,37 +306,17 @@ class FtpController(Controller):
 
             return result
 
-    def action_chmod_files(self, login, password, status_id, params, session):
-        try:
-            self.logger.info("FM starting subprocess worker chmod_files %s %s", pprint.pformat(status_id),
-                             pprint.pformat(login))
-
-            p = Process(target=self.run_subprocess,
-                        args=(self.logger, ChmodFiles, status_id.decode('UTF-8'), FM.Action.CHMOD, {
-                            "login": login.decode('UTF-8'),
-                            "password": password.decode('UTF-8'),
-                            "params": byte_to_unicode_dict(params),
-                            "session": byte_to_unicode_dict(session)
-                        }))
-
-            p.start()
-            return {"error": False}
-        except Exception as e:
-            result = {
-                "error": True,
-                "message": str(e),
-                "traceback": traceback.format_exc()
-            }
-
-            return result
-
     def action_copy_files(self, login, password, status_id, source, target, paths, overwrite):
         try:
-            self.logger.info("FM starting subprocess worker copy_files %s %s", pprint.pformat(status_id),
+            self.logger.info("FM starting subprocess worker copy_files %s %s source=%s target=%", pprint.pformat(status_id),
                              pprint.pformat(login))
+
+            self.logger.info("source before %s" % source)
 
             source = byte_to_unicode_dict(source)
             target = byte_to_unicode_dict(target)
+
+            self.logger.info("source after %s" % source)
 
             params = {
                 "login": login.decode('UTF-8'),
@@ -321,23 +327,23 @@ class FtpController(Controller):
                 "overwrite": overwrite
             }
 
-            if source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.HOME:
+            if source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, CopyFromFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.SFTP:
+                            args=(self.logger, CopyFromWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, CopyFromFtpToSftp, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.WEBDAV:
+                            args=(self.logger, CopyFromWebDavToFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.SFTP:
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, CopyFromFtpToWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif (source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.FTP) and (
+                            args=(self.logger, CopyFromWebDavToSftp, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, CopyFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
-            elif (source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.FTP) and (
+                            args=(self.logger, CopyWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') != target.get('server_id')):
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, CopyBetweenFtp, status_id.decode('UTF-8'), FM.Action.COPY, params))
+                            args=(self.logger, CopyBetweenWebDav, status_id.decode('UTF-8'), FM.Action.COPY, params))
             else:
                 raise Exception("Unable to get worker for these source and target")
 
@@ -370,23 +376,23 @@ class FtpController(Controller):
                 "overwrite": overwrite
             }
 
-            if source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.HOME:
+            if source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.HOME:
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, MoveFromFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.SFTP:
+                            args=(self.logger, MoveFromWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.FTP:
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, MoveFromFtpToSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.WEBDAV:
+                            args=(self.logger, MoveFromWebDavToFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.SFTP:
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, MoveFromFtpToWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif (source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.FTP) and (
+                            args=(self.logger, MoveFromWebDavToSftp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') == target.get('server_id')):
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, MoveFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
-            elif (source.get('type') == FM.Module.FTP and target.get('type') == FM.Module.FTP) and (
+                            args=(self.logger, MoveWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+            elif (source.get('type') == FM.Module.WEBDAV and target.get('type') == FM.Module.WEBDAV) and (
                         source.get('server_id') != target.get('server_id')):
                 p = Process(target=self.run_subprocess,
-                            args=(self.logger, MoveBetweenFtp, status_id.decode('UTF-8'), FM.Action.MOVE, params))
+                            args=(self.logger, MoveBetweenWebDav, status_id.decode('UTF-8'), FM.Action.MOVE, params))
             else:
                 raise Exception("Unable to get worker for these source and target")
 
@@ -426,45 +432,6 @@ class FtpController(Controller):
             }
 
             return result
-
-    def get_process_data(self, process_object, process_kwargs, timeout=30):
-
-        print(" === before start queue === ")
-        parent_conn, child_conn = Pipe()
-        logger = self.logger
-
-        def on_success(data=None):
-            logger.debug("Process on_success()")
-            child_conn.send(data)
-
-        def on_error(data=None):
-            logger.debug("Process on_error() data: %s" % pprint.pformat(data))
-            child_conn.send(data)
-
-        kwargs = {
-            "logger": self.logger,
-            "on_error": on_error,
-            "on_success": on_success
-        }
-
-        kwargs.update(process_kwargs)
-
-        process = process_object(**kwargs)
-        process.start()
-        ready = select.select([parent_conn], [], [], timeout)  # timeout 30sec
-        if ready[0]:
-            result = parent_conn.recv()
-            process.join()
-        else:
-            result = {
-                "error": True,
-                "message": "Request timeout"
-            }
-            if process.is_alive():
-                self.logger.error('Terminate child by timeout with pid: %s', process.pid)
-                process.terminate()
-
-        return self.on_finish(process, result)
 
     def on_finish(self, process, data=None):
         self.logger.info("Process on_finish()")

@@ -18,6 +18,7 @@ class InitCallback(BaseWorkerCustomer):
                         "server": "localhost"
                     },
                     "connections": self.get_connections(),
+                    "webdav_connections": self.get_webdav_connections(),
                 },
                 "error": False,
                 "message": None,
@@ -69,6 +70,31 @@ class InitCallback(BaseWorkerCustomer):
                 })
 
             return connections
+        except Exception as e:
+            raise e
+        finally:
+            db.close()
+
+    def get_webdav_connections(self):
+        db = sqlite3.connect(DB_FILE)
+        db.execute("PRAGMA journal_mode=MEMORY")
+        print("Database created and opened successfully file = %s" % DB_FILE)
+
+        cursor = db.cursor()
+
+        try:
+            cursor.execute("SELECT * FROM webdav_servers WHERE fm_login = ?", (self.login,))
+            results = cursor.fetchall()
+
+            webdav_connections = []
+            for result in results:
+                webdav_connections.append({
+                    'id': result[0],
+                    'host': result[2],
+                    'user': result[3],
+                    'decryptedPassword': result[4]
+                })
+            return webdav_connections
         except Exception as e:
             raise e
         finally:

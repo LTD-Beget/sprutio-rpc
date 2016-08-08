@@ -50,6 +50,22 @@ try:
             print(e)
         else:
             raise(e)
+    try:
+        cursor.execute('''CREATE TABLE webdav_servers (
+                            id          INTEGER PRIMARY KEY NOT NULL,
+                            fm_login    TEXT,
+                            host        TEXT,
+                            user        TEXT,
+                            password    TEXT
+                          );''')
+
+        cursor.execute('''CREATE INDEX webdav_servers_fm_login ON webdav_servers (fm_login);''')
+        print("table webdav_servers created successfully")
+    except OperationalError as e:
+        if str(e) == "table webdav_servers already exists":
+            print(e)
+        else:
+            raise(e)
 
     try:
         cursor.execute('''CREATE TABLE editor_settings (
