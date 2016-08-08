@@ -1,6 +1,8 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.FM import Module, Action
 from lib.FileManager.FTPConnection import FTPConnection
+from lib.FileManager.SFTPConnection import SFTPConnection
+from lib.FileManager.WebDavConnection import WebDavConnection
 import traceback
 import threading
 import os
@@ -12,12 +14,11 @@ class InitSession(BaseWorkerCustomer):
 
         self.path = path
         self.session = session
-        self.session_type = self.session.get("type", None)
+        self.session_type = self.session["type"]
 
     def run(self):
         try:
             self.preload()
-            self.logger.info("After preload")
             result = {
                 "data": {
                     "actions": self.get_allowed_actions(),
@@ -40,6 +41,8 @@ class InitSession(BaseWorkerCustomer):
             self.on_error(result)
 
     def get_allowed_actions(self):
+        self.logger.info("Getting Allowed Actions for session_type={}".format(self.session_type))
+
         if self.session_type == Module.HOME:
             actions = {
                 Action.ANALYZE_SIZE: True,
@@ -56,6 +59,7 @@ class InitSession(BaseWorkerCustomer):
                 Action.DOWNLOAD_TAR: True,
                 Action.DOWNLOAD_ZIP: True,
                 Action.EDIT: True,
+                Action.EXTRACT_ARCHIVE: True,
                 Action.HELP: True,
                 Action.HOME: True,
                 Action.HTPASSWD: False,
@@ -83,10 +87,10 @@ class InitSession(BaseWorkerCustomer):
 
             return actions
 
-        if self.session_type == Module.PUBLIC_FTP:
+        if self.session_type == Module.FTP:
             self.logger.info("FTP Actions preload")
             actions = {
-                Action.ANALYZE_SIZE: True,
+                Action.ANALYZE_SIZE: False,
                 Action.CHMOD: True,
                 Action.COPY: True,
                 Action.COPY_ENTRY: True,
@@ -126,8 +130,97 @@ class InitSession(BaseWorkerCustomer):
             }
 
             return actions
+        
+        if self.session_type == Module.WEBDAV:
+            self.logger.info("WebDav Actions preload")
+            actions = {
+                Action.ANALYZE_SIZE: False,
+                # Action.CHMOD: True, chmod is not supported
+                Action.COPY: True,
+                Action.COPY_ENTRY: True,
+                Action.COPY_PATH: True,
+                Action.CREATE_ARCHIVE: False,
+                Action.CREATE_COPY: True,
+                Action.DOWNLOAD_ARCHIVE: True,
+                Action.DOWNLOAD_BZ2: True,
+                Action.DOWNLOAD_BASIC: True,
+                Action.DOWNLOAD_GZIP: True,
+                Action.DOWNLOAD_TAR: True,
+                Action.DOWNLOAD_ZIP: True,
+                Action.EDIT: True,
+                Action.HELP: True,
+                Action.HOME: True,
+                Action.HTPASSWD: False,
+                Action.IP_BLOCK: True,
+                Action.LOCAL: False,
+                Action.LOGOUT: False,
+                Action.MOVE: True,
+                Action.NAVIGATE: True,
+                Action.NEW_FILE: True,
+                Action.NEW_FOLDER: True,
+                Action.OPEN_DIRECTORY: True,
+                Action.REFRESH: True,
+                Action.REMOVE: True,
+                Action.RENAME: True,
+                Action.ROOT: True,
+                Action.SEARCH_FILES: False,
+                Action.SEARCH_TEXT: False,
+                Action.SETTINGS: True,
+                Action.SHARE_ACCESS: False,
+                Action.SITE_LIST: False,
+                Action.UP: True,
+                Action.UPLOAD: True,
+                Action.VIEW: True
+            }
 
-        raise Exception("Unknown session type")
+            return actions
+
+        if self.session_type == Module.SFTP:
+            self.logger.info("SFTP Actions preload")
+            actions = {
+                Action.ANALYZE_SIZE: True,
+                Action.CHMOD: True,
+                Action.COPY: True,
+                Action.COPY_ENTRY: True,
+                Action.COPY_PATH: True,
+                Action.CREATE_ARCHIVE: True,
+                Action.CREATE_COPY: True,
+                Action.DOWNLOAD_ARCHIVE: True,
+                Action.DOWNLOAD_BZ2: True,
+                Action.DOWNLOAD_BASIC: True,
+                Action.DOWNLOAD_GZIP: True,
+                Action.DOWNLOAD_TAR: True,
+                Action.DOWNLOAD_ZIP: True,
+                Action.EDIT: True,
+                Action.EXTRACT_ARCHIVE: True,
+                Action.HOME: True,
+                Action.HTPASSWD: False,
+                Action.IP_BLOCK: False,
+                Action.HELP: True,
+                Action.LOCAL: False,
+                Action.LOGOUT: False,
+                Action.MOVE: True,
+                Action.NAVIGATE: True,
+                Action.NEW_FILE: True,
+                Action.NEW_FOLDER: True,
+                Action.OPEN_DIRECTORY: True,
+                Action.REFRESH: True,
+                Action.REMOVE: True,
+                Action.RENAME: True,
+                Action.ROOT: True,
+                Action.SEARCH_FILES: True,
+                Action.SEARCH_TEXT: True,
+                Action.SETTINGS: True,
+                Action.SHARE_ACCESS: False,
+                Action.SITE_LIST: False,
+                Action.UP: True,
+                Action.UPLOAD: True,
+                Action.VIEW: True
+                }
+
+            return actions
+
+        raise Exception("Unknown session type '{}'".format(self.session_type))
 
     def make_listing(self):
 
@@ -143,12 +236,29 @@ class InitSession(BaseWorkerCustomer):
 
             return result
 
-        if self.session_type == Module.PUBLIC_FTP:
+        if self.session_type == Module.FTP:
             self.logger.info("FTP Listing preload")
             path = self.path if self.path is not None else '/'
             abs_path = os.path.abspath(path)
-            ftp_connection = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp_connection = self.get_ftp_connection(self.session)
             listing = ftp_connection.list(path=abs_path)
+
+            return listing
+
+        if self.session_type == Module.SFTP:
+            self.logger.info("SFTP Listing preload")
+            path = self.path if self.path is not None else '.'
+            sftp_connection = self.get_sftp_connection(self.session)
+            listing = sftp_connection.list(path=path)
+
+            return listing
+
+        if self.session_type == Module.WEBDAV:
+            self.logger.info("WebDav Listing preload")
+            path = self.path if self.path is not None else '/'
+            abs_path = os.path.abspath(path)
+            webdav_connection = WebDavConnection.create(self.login, self.session.get('server_id'), self.logger)
+            listing = webdav_connection.list(path=abs_path)
 
             return listing
 

@@ -1,0 +1,59 @@
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from config.main import DB_FILE
+import traceback
+import sqlite3
+
+
+class RemoveWebDavConnection(BaseWorkerCustomer):
+    def __init__(self, connection_id, *args, **kwargs):
+        super(RemoveWebDavConnection, self).__init__(*args, **kwargs)
+
+        self.connection_id = connection_id
+
+    def run(self):
+        try:
+            self.preload(root=True)
+            status = self.remove_webdav_connection()
+
+            result = {
+                "data": status,
+                "error": False,
+                "message": None,
+                "traceback": None
+            }
+            self.on_success(result)
+
+        except Exception as e:
+            result = {
+                "error": True,
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            }
+
+            self.on_error(result)
+
+    def remove_webdav_connection(self):
+        db = sqlite3.connect(DB_FILE)
+        db.execute("PRAGMA journal_mode=MEMORY")
+        print("Database created and opened successfully file = %s" % DB_FILE)
+
+        cursor = db.cursor()
+
+        try:
+            self.logger.info("Removing webdav connection with id %s by user %s" % (self.connection_id, self.login))
+
+            cursor.execute("DELETE FROM webdav_servers WHERE id = ? AND fm_login = ?", (self.connection_id, self.login))
+
+            db.commit()
+            if cursor.rowcount < 1:
+                raise Exception("WebDav connection deleting failed")
+
+            status = {
+                "status": True
+            }
+            return status
+        except Exception as e:
+            raise e
+        finally:
+            db.close()
+

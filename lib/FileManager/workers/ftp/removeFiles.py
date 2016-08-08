@@ -19,7 +19,7 @@ class RemoveFiles(BaseWorkerCustomer):
             error_paths = []
 
             next_tick = time.time() + REQUEST_DELAY
-            ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.session)
 
             for path in self.paths:
                 try:

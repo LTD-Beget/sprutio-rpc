@@ -1,9 +1,8 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.progress_helper import update_progress
 import traceback
 import threading
-import time
 
 
 class ChmodFiles(BaseWorkerCustomer):
@@ -40,7 +39,7 @@ class ChmodFiles(BaseWorkerCustomer):
             recursive_dirs = False
             recursive_files = False
 
-            ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.session)
 
             if recursive:
                 recursive_dirs = False if self.params.get("recursive_mode") == 'files' else True
@@ -50,7 +49,7 @@ class ChmodFiles(BaseWorkerCustomer):
                                            args=(operation_progress, paths, recursive_dirs, recursive_files))
                 t_total.start()
 
-                t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
+                t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
                 t_progress.start()
 
             for path in paths:
@@ -129,7 +128,7 @@ class ChmodFiles(BaseWorkerCustomer):
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
 
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+        ftp = self.get_ftp_connection(self.session)
         for path in paths:
             try:
                 abs_path = ftp.path.abspath(path)
@@ -149,28 +148,4 @@ class ChmodFiles(BaseWorkerCustomer):
         progress_object["total_done"] = True
         self.logger.debug("done get_total()")
         ftp.ftp.close()
-        return
-
-    def update_progress(self, progress_object):
-        self.logger.debug("start update_progress()")
-        next_tick = time.time() + REQUEST_DELAY
-
-        self.on_running(self.status_id, pid=self.pid, pname=self.name)
-
-        while not progress_object.get("operation_done"):
-            if time.time() > next_tick and progress_object.get("total_done"):
-                progress = {
-                    'percent': round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2),
-                    'text': str(int(round(float(progress_object.get("processed")) / float(progress_object.get("total")),
-                                          2) * 100)) + '%'
-                }
-
-                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-            elif time.time() > next_tick:
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-
-        self.logger.debug("done update_progress()")
         return

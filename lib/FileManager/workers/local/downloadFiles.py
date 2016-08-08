@@ -16,7 +16,6 @@ class DownloadFiles(BaseWorkerCustomer):
         self.paths = paths
         self.mode = mode
 
-
     def _prepare(self):
         if os.path.islink(self.download_dir):
             raise Exception('Symlinks are not allowed!')
@@ -28,7 +27,6 @@ class DownloadFiles(BaseWorkerCustomer):
 
         os.lchown(os.path.dirname(self.download_dir), pw.pw_uid, pw.pw_gid)
         os.lchown(self.download_dir, pw.pw_uid, pw.pw_gid)
-
 
     def run(self):
         try:

@@ -33,7 +33,7 @@ class WriteFile(BaseWorkerCustomer):
                 self.logger.error("Error %s , %s" % (str(e), traceback.format_exc()))
                 raise e
 
-            ftp_connection = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp_connection = self.get_ftp_connection(self.session)
 
             try:
                 temp_dir = os.path.abspath('/tmp/fm/' + self.random_hash())

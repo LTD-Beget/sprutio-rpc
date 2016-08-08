@@ -1,7 +1,8 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
 from lib.FTP.FTP import transfer_between_ftp
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.progress_helper import update_progress
 import traceback
 import threading
 import time
@@ -40,12 +41,12 @@ class MoveBetweenFtp(BaseWorkerCustomer):
 
             self.logger.info("CopyFromFtp process run source = %s , target = %s" % (source_path, target_path))
 
-            source_ftp = FTPConnection.create(self.login, self.source.get('server_id'), self.logger)
-            target_ftp = FTPConnection.create(self.login, self.target.get('server_id'), self.logger)
+            source_ftp = self.get_ftp_connection(self.source)
+            target_ftp = self.get_ftp_connection(self.target)
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
-            t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
+            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
             t_progress.start()
 
             for path in self.paths:
@@ -164,7 +165,7 @@ class MoveBetweenFtp(BaseWorkerCustomer):
 
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        source_ftp = FTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+        source_ftp = self.get_ftp_connection(self.source)
         for path in paths:
             try:
                 abs_path = source_ftp.path.abspath(path)
@@ -182,28 +183,4 @@ class MoveBetweenFtp(BaseWorkerCustomer):
 
         progress_object["total_done"] = True
         self.logger.debug("done get_total()")
-        return
-
-    def update_progress(self, progress_object):
-        self.logger.debug("start update_progress()")
-        next_tick = time.time() + REQUEST_DELAY
-
-        self.on_running(self.status_id, pid=self.pid, pname=self.name)
-
-        while not progress_object.get("operation_done"):
-            if time.time() > next_tick and progress_object.get("total_done"):
-                progress = {
-                    'percent': round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2),
-                    'text': str(int(round(float(progress_object.get("processed")) / float(progress_object.get("total")),
-                                          2) * 100)) + '%'
-                }
-
-                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-            elif time.time() > next_tick:
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-
-        self.logger.debug("done update_progress()")
         return

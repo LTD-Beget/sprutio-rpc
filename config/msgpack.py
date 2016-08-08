@@ -3,11 +3,11 @@ TYPE_MSGPACK = 'msgpack'
 
 MSGPACK_CONTROLLERS = 'controllers'
 
-servers = dict(
+servers = {
     # используется по умолнчаению
-    default=dict(
+    'default': dict(
         type=TYPE_MSGPACK,
         host="127.0.0.1",
         port=8500
-    )
-)
+    ),
+}

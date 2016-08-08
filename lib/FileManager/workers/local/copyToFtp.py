@@ -1,6 +1,7 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.progress_helper import update_progress
 import os
 import traceback
 import threading
@@ -41,12 +42,12 @@ class CopyToFtp(BaseWorkerCustomer):
             source_path = self.get_abs_path(source_path)
 
             self.logger.info("CopyToFtp process run source = %s , target = %s" % (source_path, target_path))
-            ftp = FTPConnection.create(self.login, self.target.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.target)
 
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
-            t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
+            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
             t_progress.start()
 
             for path in self.paths:
@@ -95,16 +96,13 @@ class CopyToFtp(BaseWorkerCustomer):
                                                                             'error'] is not None else Exception(
                                             "Upload error")
                                 elif self.overwrite and ftp.exists(target_file) and not ftp.isdir(target_file):
+                                    ftp.remove(target_file)
                                     upload_result = ftp.upload(source_file, target_file_path)
                                     if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
                                         raise upload_result['error'] if upload_result[
                                                                             'error'] is not None else Exception(
                                             "Upload error")
                                 elif self.overwrite and ftp.isdir(target_file):
-                                    """
-                                    See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                                    In case copy file when destination is dir
-                                    """
                                     ftp.remove(target_file)
                                     upload_result = ftp.upload(source_file, target_file_path)
                                     if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
@@ -123,15 +121,12 @@ class CopyToFtp(BaseWorkerCustomer):
                                     raise upload_result['error'] if upload_result['error'] is not None else Exception(
                                         "Upload error")
                             elif self.overwrite and ftp.exists(target_file) and not ftp.isdir(target_file):
+                                ftp.remove(target_file)
                                 upload_result = ftp.upload(abs_path, target_path)
                                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
                                     raise upload_result['error'] if upload_result['error'] is not None else Exception(
                                         "Upload error")
                             elif self.overwrite and ftp.isdir(target_file):
-                                """
-                                See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                                In case copy file when destination is dir
-                                """
                                 ftp.remove(target_file)
                                 upload_result = ftp.upload(abs_path, target_path)
                                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:
@@ -199,28 +194,4 @@ class CopyToFtp(BaseWorkerCustomer):
 
         progress_object["total_done"] = True
         self.logger.debug("done get_total()")
-        return
-
-    def update_progress(self, progress_object):
-        self.logger.debug("start update_progress()")
-        next_tick = time.time() + REQUEST_DELAY
-
-        self.on_running(self.status_id, pid=self.pid, pname=self.name)
-
-        while not progress_object.get("operation_done"):
-            if time.time() > next_tick and progress_object.get("total_done"):
-                progress = {
-                    'percent': round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2),
-                    'text': str(int(round(float(progress_object.get("processed")) / float(progress_object.get("total")),
-                                          2) * 100)) + '%'
-                }
-
-                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-            elif time.time() > next_tick:
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-
-        self.logger.debug("done update_progress()")
         return

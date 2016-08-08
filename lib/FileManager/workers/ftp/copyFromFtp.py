@@ -1,6 +1,7 @@
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.progress_helper import update_progress
 import os
 import traceback
 import threading
@@ -8,9 +9,9 @@ import shutil
 import time
 
 
-class MoveFromFtp(BaseWorkerCustomer):
+class CopyFromFtp(BaseWorkerCustomer):
     def __init__(self, source, target, paths, overwrite, *args, **kwargs):
-        super(MoveFromFtp, self).__init__(*args, **kwargs)
+        super(CopyFromFtp, self).__init__(*args, **kwargs)
 
         self.source = source
         self.target = target
@@ -41,13 +42,13 @@ class MoveFromFtp(BaseWorkerCustomer):
 
             target_path = self.get_abs_path(target_path)
 
-            self.logger.info("MoveFromFtp process run source = %s , target = %s" % (source_path, target_path))
+            self.logger.info("CopyFromFtp process run source = %s , target = %s" % (source_path, target_path))
 
-            ftp = FTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.source)
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
-            t_progress = threading.Thread(target=self.update_progress, args=(operation_progress,))
+            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
             t_progress.start()
 
             for path in self.paths:
@@ -90,7 +91,7 @@ class MoveFromFtp(BaseWorkerCustomer):
                             for f in files:
                                 f = f.encode("ISO-8859-1").decode("UTF-8")
                                 source_file = os.path.join(current, f)
-                                target_file_path = ftp.path.join(target_path, relative_root)
+                                target_file_path = os.path.join(target_path, relative_root)
                                 target_file = os.path.join(target_path, relative_root, f)
                                 if not os.path.exists(target_file):
                                     download_result = ftp.download(source_file, target_file_path)
@@ -151,17 +152,16 @@ class MoveFromFtp(BaseWorkerCustomer):
                                 pass
 
                         except Exception as e:
-                            self.logger.info("Cannot move file %s , %s" % (abs_path, str(e)))
+                            self.logger.info("Cannot copy file %s , %s" % (abs_path, str(e)))
                             raise e
                         finally:
                             operation_progress["processed"] += 1
 
-                    success_paths.append(abs_path)
-                    ftp.remove(abs_path)
+                    success_paths.append(path)
 
                 except Exception as e:
                     self.logger.error(
-                        "Error move %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
+                        "Error copy %s , error %s , %s" % (str(path), str(e), traceback.format_exc()))
                     error_paths.append(path)
 
             operation_progress["operation_done"] = True
@@ -190,7 +190,7 @@ class MoveFromFtp(BaseWorkerCustomer):
 
     def get_total(self, progress_object, paths, count_dirs=True, count_files=True):
         self.logger.debug("start get_total() dirs = %s , files = %s" % (count_dirs, count_files))
-        ftp = FTPConnection.create(self.login, self.source.get('server_id'), self.logger)
+        ftp = self.get_ftp_connection(self.source)
         for path in paths:
             try:
                 abs_path = ftp.path.abspath(path)
@@ -208,28 +208,4 @@ class MoveFromFtp(BaseWorkerCustomer):
 
         progress_object["total_done"] = True
         self.logger.debug("done get_total()")
-        return
-
-    def update_progress(self, progress_object):
-        self.logger.debug("start update_progress()")
-        next_tick = time.time() + REQUEST_DELAY
-
-        self.on_running(self.status_id, pid=self.pid, pname=self.name)
-
-        while not progress_object.get("operation_done"):
-            if time.time() > next_tick and progress_object.get("total_done"):
-                progress = {
-                    'percent': round(float(progress_object.get("processed")) / float(progress_object.get("total")), 2),
-                    'text': str(int(round(float(progress_object.get("processed")) / float(progress_object.get("total")),
-                                          2) * 100)) + '%'
-                }
-
-                self.on_running(self.status_id, progress=progress, pid=self.pid, pname=self.name)
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-            elif time.time() > next_tick:
-                next_tick = time.time() + REQUEST_DELAY
-                time.sleep(REQUEST_DELAY)
-
-        self.logger.debug("done update_progress()")
         return

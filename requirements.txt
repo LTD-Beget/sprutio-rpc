@@ -24,5 +24,12 @@ chardet
 # for ftp
 ftputil
 
+# for ssh
+paramiko
+
 # for transfer files
 pysendfile
+
+#for webdav
+webdavclient
+#easywebdav

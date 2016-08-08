@@ -37,6 +37,7 @@ encodings = [
 class Action(object):
     HOME = "FM.action.HomeFtp"
     REMOTE_FTP = "FM.action.RemoteFtp"
+    REMOTE_WEBDAV = "FM.action.RemoteWebDav"
     LOCAL = 'FM.action.Local'
     SITE_LIST = 'FM.action.SiteList'
 
@@ -88,4 +89,6 @@ class Action(object):
 # Aliases for FM modules
 class Module(object):
     HOME = "home"
-    PUBLIC_FTP = "public_ftp"
+    FTP = "ftp"
+    SFTP = "sftp"
+    WEBDAV = "webdav"

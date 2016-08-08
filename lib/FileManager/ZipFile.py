@@ -505,7 +505,7 @@ class _ZipDecrypter:
         """Decrypt a single character."""
         assert isinstance(c, int)
         k = self.key2 | 2
-        c = c ^ (((k * (k ^ 1)) >> 8) & 255)
+        c ^= (((k * (k ^ 1)) >> 8) & 255)
         self._UpdateKeys(c)
         return c
 
@@ -1399,15 +1399,15 @@ class ZipFile:
                 buf = fp.read(1024 * 8)
                 if not buf:
                     break
-                file_size = file_size + len(buf)
+                file_size += len(buf)
                 CRC = crc32(buf, CRC) & 0xffffffff
                 if cmpr:
                     buf = cmpr.compress(buf)
-                    compress_size = compress_size + len(buf)
+                    compress_size += len(buf)
                 self.fp.write(buf)
         if cmpr:
             buf = cmpr.flush()
-            compress_size = compress_size + len(buf)
+            compress_size += len(buf)
             self.fp.write(buf)
             zinfo.compress_size = compress_size
         else:

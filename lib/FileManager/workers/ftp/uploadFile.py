@@ -18,7 +18,7 @@ class UploadFile(BaseWorkerCustomer):
             self.preload()
             self.logger.info("FTP UploadFile process run")
 
-            ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.session)
 
             target_file = ftp.path.join(self.path, os.path.basename(self.file_path))
 
@@ -35,10 +35,6 @@ class UploadFile(BaseWorkerCustomer):
                         "Upload error")
                 os.remove(self.file_path)
             elif self.overwrite and ftp.path.isdir(target_file):
-                """
-                See https://docs.python.org/3.4/library/shutil.html?highlight=shutil#shutil.copy
-                In case copy file when destination is dir
-                """
                 ftp.remove(target_file)
                 upload_result = ftp.upload(self.file_path, self.path)
                 if not upload_result['success'] or len(upload_result['file_list']['failed']) > 0:

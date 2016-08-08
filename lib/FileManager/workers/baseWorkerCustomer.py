@@ -9,6 +9,8 @@ import sys
 import pam
 from misc.helpers import kill
 from config.main import ROOT_MOUNT
+from lib.FileManager.FTPConnection import FTPConnection
+from lib.FileManager.SFTPConnection import SFTPConnection
 
 
 class BaseWorkerCustomer(BaseWorker):
@@ -31,7 +33,7 @@ class BaseWorkerCustomer(BaseWorker):
         if not root:
             p = pam.pam()
             if not p.authenticate(self.login, self.password):
-                raise Exception('Not Authenticated - %s (%s)' % (p.code, p.reason))
+                raise Exception('Not Authenticated - %s (%s) ("%s":"%s"):' % (p.code, p.reason, self.login, self.password))
 
             self.set_customer_uid()
 
@@ -123,3 +125,9 @@ class BaseWorkerCustomer(BaseWorker):
         except Exception:
             # self.logger.error("Error on_sigterm() %s , error %s" % (str(e), traceback.format_exc()))
             sys.exit(1)
+
+    def get_ftp_connection(self, session):
+        return FTPConnection.create(self.login, session['server_id'], self.logger)
+
+    def get_sftp_connection(self, session):
+        return SFTPConnection.create(self.login, session['server_id'], self.logger)

@@ -17,7 +17,7 @@ class NewFile(BaseWorkerCustomer):
             abs_path = os.path.abspath(self.path)
             self.logger.debug("FM FTP NewFile worker run(), abs_path = %s" % abs_path)
 
-            ftp_connection = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp_connection = self.get_ftp_connection(self.session)
 
             try:
                 if ftp_connection.path.exists(abs_path):

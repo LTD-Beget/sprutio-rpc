@@ -18,7 +18,7 @@ class ReadRulesFtp(BaseWorkerCustomer):
             abs_path = self.get_abs_path(self.path)
             self.logger.debug("FM ReadRulesLocal worker run(), abs_path = %s" % abs_path)
 
-            ftp = FTPConnection.create(self.login, self.session.get('server_id'), self.logger)
+            ftp = self.get_ftp_connection(self.session)
 
             htaccess_path = os.path.join(self.path, '.htaccess')
 
