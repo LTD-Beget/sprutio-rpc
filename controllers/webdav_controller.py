@@ -62,13 +62,16 @@ class WebdavController(Controller):
             "session": byte_to_unicode_dict(session)
         })
 
-    def action_read_file(self, login, password, path, session):
+    def action_read_file(self, login, password, path, encoding, session):
+        if encoding is None:
+            encoding = b''
 
         return self.get_process_data(ReadFile, {
             "login": login.decode('UTF-8'),
             "password": password.decode('UTF-8'),
             "path": path.decode("UTF-8"),
-            "session": byte_to_unicode_dict(session)
+            "session": byte_to_unicode_dict(session),
+            "encoding": encoding.decode('UTF-8')
         })
 
     def action_create_connection(self, login, password, host, webdav_user, webdav_password):

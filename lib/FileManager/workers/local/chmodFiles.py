@@ -46,7 +46,7 @@ class ChmodFiles(BaseWorkerCustomer):
                                            args=(operation_progress, paths, recursive_dirs, recursive_files))
                 t_total.start()
 
-                t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
+                t_progress = threading.Thread(target=update_progress, args=(self, operation_progress,))
                 t_progress.start()
 
             for path in paths:

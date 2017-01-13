@@ -1041,3 +1041,6 @@ class FTP:
             result['file_list'] = file_list
 
             return result
+
+    def walk(self, path):
+        return self.ftp.walk(path)

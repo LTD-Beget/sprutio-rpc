@@ -49,7 +49,7 @@ class MoveToSftp(BaseWorkerCustomer):
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
             t_total.start()
 
-            t_progress = threading.Thread(target=update_progress, args=(operation_progress,))
+            t_progress = threading.Thread(target=update_progress, args=(self, operation_progress,))
             t_progress.start()
 
             for path in self.paths:

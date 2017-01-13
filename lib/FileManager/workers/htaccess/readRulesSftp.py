@@ -4,9 +4,9 @@ import traceback
 import os
 
 
-class ReadRulesFtp(BaseWorkerCustomer):
+class ReadRulesSftp(BaseWorkerCustomer):
     def __init__(self, path, session, *args, **kwargs):
-        super(ReadRulesFtp, self).__init__(*args, **kwargs)
+        super(ReadRulesSftp, self).__init__(*args, **kwargs)
 
         self.path = path
         self.session = session
@@ -15,13 +15,13 @@ class ReadRulesFtp(BaseWorkerCustomer):
         try:
             self.preload()
             abs_path = self.get_abs_path(self.path)
-            self.logger.debug("FM ReadRulesFtp worker run(), abs_path = %s" % abs_path)
+            self.logger.debug("FM ReadRulesSftp worker run(), abs_path = %s" % abs_path)
 
-            ftp = self.get_ftp_connection(self.session)
+            sftp = self.get_sftp_connection(self.session)
 
             htaccess_path = os.path.join(self.path, '.htaccess')
 
-            if not ftp.exists(htaccess_path):
+            if not sftp.exists(htaccess_path):
                 default_rules = {
                     'allow_all': True,
                     'deny_all': False,
@@ -40,7 +40,7 @@ class ReadRulesFtp(BaseWorkerCustomer):
                 self.on_success(result)
                 return
 
-            with ftp.open(abs_path) as fd:
+            with sftp.open(abs_path) as fd:
                 content = fd.read()
 
             htaccess = HtAccess(content, self.logger)
