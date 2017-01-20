@@ -1,7 +1,7 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
-import traceback
 import os
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ListFiles(BaseWorkerCustomer):

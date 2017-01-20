@@ -1,13 +1,14 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.WebDavConnection import WebDavConnection
-from lib.FileManager.FTPConnection import FTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
-import traceback
-import threading
-import time
 import os
 import shutil
+import threading
+import time
+import traceback
+
 from config.main import TMP_DIR
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.FTPConnection import FTPConnection
+from lib.FileManager.WebDavConnection import WebDavConnection
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class CopyFromWebDavToFtp(BaseWorkerCustomer):

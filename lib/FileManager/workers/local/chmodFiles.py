@@ -1,8 +1,9 @@
+import os
+import threading
+import traceback
+
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from lib.FileManager.workers.progress_helper import update_progress
-import traceback
-import threading
-import os
 
 
 class ChmodFiles(BaseWorkerCustomer):

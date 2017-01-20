@@ -1,7 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.HtAccess import HtAccess
-import traceback
 import os
+import traceback
+
+from lib.FileManager.HtAccess import HtAccess
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class SaveRulesLocal(BaseWorkerCustomer):
@@ -18,10 +19,10 @@ class SaveRulesLocal(BaseWorkerCustomer):
             abs_path = self.get_abs_path(self.path)
             self.logger.debug("FM ReadRulesLocal worker run(), abs_path = %s" % abs_path)
 
-            htaccess_path = os.path.join(self.path, '.htaccess')
+            htaccess_path = os.path.join(abs_path, '.htaccess')
 
             if not os.path.exists(htaccess_path):
-                fd = open(htaccess_path, 'w')
+                fd = open(htaccess_path, 'x')
                 fd.close()
 
             with open(htaccess_path, 'r') as fd:

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-import sqlite3
-from sqlite3 import OperationalError
 import os
+import sqlite3
 import traceback
-from config.main import DB_FILE
+from sqlite3 import OperationalError
 
+from config.main import DB_FILE
 
 if os.path.exists(DB_FILE):
     print("Database already created")

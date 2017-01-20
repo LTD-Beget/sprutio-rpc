@@ -11,7 +11,8 @@ from lib.FileManager.OperationStatus import OperationStatus
 from lib.FileManager.workers.ftp.chmodFiles import ChmodFiles
 from lib.FileManager.workers.ftp.copyBetweenFtp import CopyBetweenFtp
 from lib.FileManager.workers.ftp.copyFromFtp import CopyFromFtp
-from lib.FileManager.workers.ftp.moveFromFtpToSftp import MoveFromFtpToSftp
+from lib.FileManager.workers.ftp.copyFromFtpToSftp import CopyFromFtpToSftp
+from lib.FileManager.workers.ftp.copyFromFtpToWebDav import CopyFromFtpToWebDav
 from lib.FileManager.workers.ftp.copyFtp import CopyFtp
 from lib.FileManager.workers.ftp.createConnection import CreateConnection
 from lib.FileManager.workers.ftp.createCopy import CreateCopy
@@ -20,8 +21,7 @@ from lib.FileManager.workers.ftp.listFiles import ListFiles
 from lib.FileManager.workers.ftp.makeDir import MakeDir
 from lib.FileManager.workers.ftp.moveBetweenFtp import MoveBetweenFtp
 from lib.FileManager.workers.ftp.moveFromFtp import MoveFromFtp
-from lib.FileManager.workers.ftp.copyFromFtpToSftp import CopyFromFtpToSftp
-from lib.FileManager.workers.ftp.copyFromFtpToWebDav import CopyFromFtpToWebDav
+from lib.FileManager.workers.ftp.moveFromFtpToSftp import MoveFromFtpToSftp
 from lib.FileManager.workers.ftp.moveFromFtpToWebDav import MoveFromFtpToWebDav
 from lib.FileManager.workers.ftp.moveFtp import MoveFtp
 from lib.FileManager.workers.ftp.newFile import NewFile

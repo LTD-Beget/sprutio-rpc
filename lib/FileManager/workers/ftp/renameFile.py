@@ -1,7 +1,7 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
-import traceback
 import os
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class RenameFile(BaseWorkerCustomer):
@@ -47,7 +47,7 @@ class RenameFile(BaseWorkerCustomer):
                 self.on_success(result)
 
             except Exception as e:
-                result = FTPConnection.get_error(e, "Unable to rename source element.")
+                result = ftp_connection.get_error(e, "Unable to rename source element.")
                 self.on_error(result)
 
         except Exception as e:

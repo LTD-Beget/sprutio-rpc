@@ -1,12 +1,13 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.workers.progress_helper import update_progress
 import os
-import traceback
-import threading
 import shutil
-import time
 import stat
+import threading
+import time
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.progress_helper import update_progress
 
 
 class CopyLocal(BaseWorkerCustomer):

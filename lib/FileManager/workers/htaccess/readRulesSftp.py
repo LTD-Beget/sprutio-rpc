@@ -1,7 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.HtAccess import HtAccess
-import traceback
 import os
+import traceback
+
+from lib.FileManager.HtAccess import HtAccess
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ReadRulesSftp(BaseWorkerCustomer):
@@ -14,8 +15,7 @@ class ReadRulesSftp(BaseWorkerCustomer):
     def run(self):
         try:
             self.preload()
-            abs_path = self.get_abs_path(self.path)
-            self.logger.debug("FM ReadRulesSftp worker run(), abs_path = %s" % abs_path)
+            self.logger.debug("FM ReadRulesSftp worker run(), path = %s" % self.path)
 
             sftp = self.get_sftp_connection(self.session)
 
@@ -40,8 +40,8 @@ class ReadRulesSftp(BaseWorkerCustomer):
                 self.on_success(result)
                 return
 
-            with sftp.open(abs_path) as fd:
-                content = fd.read()
+            with sftp.open(htaccess_path) as fd:
+                content = fd.read().decode('ascii')
 
             htaccess = HtAccess(content, self.logger)
 

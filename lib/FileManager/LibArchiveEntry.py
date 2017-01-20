@@ -28,8 +28,8 @@ import stat
 import time
 import warnings
 
-from libarchive import _libarchive
 from libarchive import EOF
+from libarchive import _libarchive
 
 # Suggested block size for libarchive. Libarchive may adjust it.
 BLOCK_SIZE = 10240

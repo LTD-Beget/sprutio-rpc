@@ -3,16 +3,16 @@ Read and write ZIP files.
 
 XXX references to utf-8 need further investigation.
 """
+import binascii
+import importlib.util
 import io
 import os
 import re
-import importlib.util
+import shutil
+import stat
+import struct
 import sys
 import time
-import stat
-import shutil
-import struct
-import binascii
 
 try:
     import zlib  # We may need its compression method

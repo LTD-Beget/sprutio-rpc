@@ -1,16 +1,17 @@
-from lib.FileManager.workers.baseWorker import BaseWorker
-
-import pwd
 import grp
 import os
+import pwd
 import setproctitle
 import signal
 import sys
+
 import pam
-from misc.helpers import kill
+
 from config.main import ROOT_MOUNT
 from lib.FileManager.FTPConnection import FTPConnection
 from lib.FileManager.SFTPConnection import SFTPConnection
+from lib.FileManager.workers.baseWorker import BaseWorker
+from misc.helpers import kill
 
 
 class BaseWorkerCustomer(BaseWorker):

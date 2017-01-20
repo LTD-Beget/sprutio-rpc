@@ -1,8 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
-from misc.helpers import detect_encoding
-import traceback
 import os
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from misc.helpers import detect_encoding
 
 
 class ReadFile(BaseWorkerCustomer):
@@ -42,7 +42,7 @@ class ReadFile(BaseWorkerCustomer):
 
                 self.on_success(result)
             except Exception as e:
-                result = FTPConnection.get_error(e, "Unable to open file \"%s\"." % os.path.basename(abs_path))
+                result = ftp_connection.get_error(e, "Unable to open file \"%s\"." % os.path.basename(abs_path))
                 self.on_error(result)
 
         except Exception as e:

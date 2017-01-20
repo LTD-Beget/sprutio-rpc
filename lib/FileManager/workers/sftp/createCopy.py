@@ -1,11 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
-
 import os
 import stat
-import traceback
 import time
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class CreateCopy(BaseWorkerCustomer):

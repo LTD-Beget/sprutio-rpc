@@ -1,7 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from config.main import DB_FILE
-import traceback
 import sqlite3
+import traceback
+
+from config.main import DB_FILE
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class UpdateConnection(BaseWorkerCustomer):

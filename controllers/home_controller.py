@@ -1,37 +1,39 @@
+import pprint
+import select
+import traceback
+from multiprocessing import Pipe, Process
+
 from beget_msgpack import Controller
-from lib.FileManager.workers.local.listFiles import ListFiles
-from lib.FileManager.workers.local.makeDir import MakeDir
-from lib.FileManager.workers.local.newFile import NewFile
-from lib.FileManager.workers.local.readFile import ReadFile
-from lib.FileManager.workers.local.writeFile import WriteFile
-from lib.FileManager.workers.local.renameFile import RenameFile
-from lib.FileManager.workers.local.removeFiles import RemoveFiles
+
+from base.exc import Error
+from lib.FileManager import FM
+from lib.FileManager.OperationStatus import OperationStatus
 from lib.FileManager.workers.local.analyzeSize import AnalyzeSize
 from lib.FileManager.workers.local.chmodFiles import ChmodFiles
-from lib.FileManager.workers.local.createArchive import CreateArchive
-from lib.FileManager.workers.local.extractArchive import ExtractArchive
-from lib.FileManager.workers.local.findText import FindText
-from lib.FileManager.workers.local.findFiles import FindFiles
-from lib.FileManager.workers.local.createCopy import CreateCopy
 from lib.FileManager.workers.local.copyLocal import CopyLocal
 from lib.FileManager.workers.local.copyToFtp import CopyToFtp
 from lib.FileManager.workers.local.copyToSftp import CopyToSftp
 from lib.FileManager.workers.local.copyToWebDav import CopyToWebDav
-from lib.FileManager.workers.local.moveToWebDav import MoveToWebDav
+from lib.FileManager.workers.local.createArchive import CreateArchive
+from lib.FileManager.workers.local.createCopy import CreateCopy
+from lib.FileManager.workers.local.downloadFiles import DownloadFiles
+from lib.FileManager.workers.local.extractArchive import ExtractArchive
+from lib.FileManager.workers.local.findFiles import FindFiles
+from lib.FileManager.workers.local.findText import FindText
+from lib.FileManager.workers.local.listFiles import ListFiles
+from lib.FileManager.workers.local.makeDir import MakeDir
 from lib.FileManager.workers.local.moveLocal import MoveLocal
 from lib.FileManager.workers.local.moveToFtp import MoveToFtp
 from lib.FileManager.workers.local.moveToSftp import MoveToSftp
-from lib.FileManager.workers.local.downloadFiles import DownloadFiles
+from lib.FileManager.workers.local.moveToWebDav import MoveToWebDav
+from lib.FileManager.workers.local.newFile import NewFile
+from lib.FileManager.workers.local.readFile import ReadFile
 from lib.FileManager.workers.local.readImages import ReadImages
+from lib.FileManager.workers.local.removeFiles import RemoveFiles
+from lib.FileManager.workers.local.renameFile import RenameFile
 from lib.FileManager.workers.local.uploadFile import UploadFile
-from lib.FileManager import FM
-from multiprocessing import Pipe, Process
-from base.exc import Error
+from lib.FileManager.workers.local.writeFile import WriteFile
 from misc.helpers import byte_to_unicode_list, byte_to_unicode_dict
-import pprint
-import select
-import traceback
-from lib.FileManager.OperationStatus import OperationStatus
 
 
 class HomeController(Controller):

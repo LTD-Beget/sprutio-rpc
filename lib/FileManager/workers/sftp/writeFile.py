@@ -1,11 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
-from misc.helperUnicode import as_bytes
-import traceback
+import os
 import pprint
 import random
-import os
 import shutil
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from misc.helperUnicode import as_bytes
 
 
 class WriteFile(BaseWorkerCustomer):

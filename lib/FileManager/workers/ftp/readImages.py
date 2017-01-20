@@ -1,8 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
-from config.main import TMP_DIR
-import traceback
 import os
+import traceback
+
+from config.main import TMP_DIR
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ReadImages(BaseWorkerCustomer):

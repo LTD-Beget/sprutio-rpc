@@ -1,18 +1,19 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
-from misc.helperUnicode import as_unicode
-from misc.helpers import kill
-import traceback
-import os
-import signal
-import re
 import fnmatch
+import mimetypes
+import os
+import re
+import signal
+import time
+import traceback
+from multiprocessing import Process, JoinableQueue, Queue
+
 import chardet
 import psutil
-import mimetypes
-from multiprocessing import Process, JoinableQueue, Queue
-import time
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from misc.helperUnicode import as_unicode
+from misc.helpers import kill
 
 TIMEOUT_LIMIT = 60 * 60  # 10 min
 

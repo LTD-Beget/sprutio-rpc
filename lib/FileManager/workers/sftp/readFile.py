@@ -1,5 +1,6 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from misc.helpers import detect_encoding
 
 

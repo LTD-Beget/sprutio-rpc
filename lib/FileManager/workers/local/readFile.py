@@ -1,7 +1,9 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-import traceback
 import os
+import traceback
+
 from binaryornot.check import is_binary
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from misc.helpers import detect_encoding
 
 

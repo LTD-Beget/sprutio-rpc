@@ -1,9 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FM import REQUEST_DELAY
-import traceback
+import os
 import shutil
 import time
-import os
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class RemoveFiles(BaseWorkerCustomer):

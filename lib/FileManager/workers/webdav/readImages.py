@@ -1,8 +1,9 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.WebDavConnection import WebDavConnection
-from config.main import TMP_DIR
-import traceback
 import os
+import traceback
+
+from config.main import TMP_DIR
+from lib.FileManager.WebDavConnection import WebDavConnection
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ReadImages(BaseWorkerCustomer):

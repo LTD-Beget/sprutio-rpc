@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-import platform
-from distutils.version import LooseVersion
-import threading
-import asyncore
 import asynchat
-import sys
-import time
+import asyncore
 import os
+import platform
+import sys
+import threading
+import time
 import traceback
-
+from distutils.version import LooseVersion
 
 from misc import helpers
 from misc import logger

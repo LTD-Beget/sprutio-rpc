@@ -1,7 +1,8 @@
 import sqlite3
+import traceback
+
 from config.main import DB_FILE
 from lib.WebDav.WebDav import WebDav
-import traceback
 
 
 class WebDavConnection(object):

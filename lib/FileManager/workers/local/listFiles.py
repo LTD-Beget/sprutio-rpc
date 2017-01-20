@@ -1,7 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-import traceback
 import os
 import threading
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ListFiles(BaseWorkerCustomer):

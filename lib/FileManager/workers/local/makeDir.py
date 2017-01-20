@@ -1,6 +1,7 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-import traceback
 import os
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class MakeDir(BaseWorkerCustomer):

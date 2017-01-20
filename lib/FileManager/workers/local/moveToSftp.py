@@ -1,13 +1,13 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.workers.progress_helper import update_progress
 import os
+import shutil
 import stat
-import traceback
 import threading
 import time
-import shutil
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.progress_helper import update_progress
 
 
 class MoveToSftp(BaseWorkerCustomer):
@@ -43,7 +43,7 @@ class MoveToSftp(BaseWorkerCustomer):
 
             source_path = self.get_abs_path(source_path)
 
-            self.logger.info("MoveToFtp process run source = %s , target = %s" % (source_path, target_path))
+            self.logger.info("MoveToSftp process run source = %s , target = %s" % (source_path, target_path))
             sftp = self.get_sftp_connection(self.target)
 
             t_total = threading.Thread(target=self.get_total, args=(operation_progress, self.paths))
@@ -120,15 +120,15 @@ class MoveToSftp(BaseWorkerCustomer):
                         try:
                             target_file = os.path.join(target_path, file_basename)
                             if not sftp.exists(target_file):
-                                sftp.sftp.put(abs_path, target_path)
+                                sftp.sftp.put(abs_path, target_file)
                                 os.remove(abs_path)
                             elif self.overwrite and sftp.exists(target_file) and not sftp.isdir(target_file):
                                 sftp.remove(target_file)
-                                sftp.sftp.put(abs_path, target_path)
+                                sftp.sftp.put(abs_path, target_file)
                                 os.remove(abs_path)
                             elif self.overwrite and sftp.isdir(target_file):
                                 sftp.remove(target_file)
-                                sftp.sftp.put(abs_path, target_path)
+                                sftp.sftp.put(abs_path, target_file)
                                 os.remove(abs_path)
                             else:
                                 pass

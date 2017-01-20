@@ -1,20 +1,18 @@
 #!/usr/bin/env python
+import argparse
 import platform
+import sys
+import traceback
+import os
 from distutils.version import LooseVersion
 
-import os
-import sys
-import argparse
-import traceback
-
 import beget_msgpack
-
-from misc import helpers
-from misc import logger
 
 from config.main import DEFAULT_LOGGER
 from config.msgpack import MSGPACK_CONTROLLERS
 from controllers import *
+from misc import helpers
+from misc import logger
 
 if LooseVersion(platform.release()) >= LooseVersion('3.9'):
     import socket

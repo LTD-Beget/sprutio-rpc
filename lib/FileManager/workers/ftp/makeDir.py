@@ -1,7 +1,7 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
-import traceback
 import os
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class MakeDir(BaseWorkerCustomer):
@@ -37,7 +37,7 @@ class MakeDir(BaseWorkerCustomer):
 
                 self.on_success(result)
             except Exception as e:
-                result = FTPConnection.get_error(e, "File path already exists")
+                result = ftp_connection.get_error(e, "File path already exists")
                 self.on_error(result)
 
         except Exception as e:

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+import logging
 import sys
 import traceback
-import paramiko
-import logging
-from paramiko.rsakey import RSAKey
 from io import StringIO
+
+import paramiko
+from paramiko.rsakey import RSAKey
 
 
 def force_unicode(s, encoding='utf-8', errors='strict'):

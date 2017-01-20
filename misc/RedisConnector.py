@@ -1,7 +1,7 @@
 import json
 
-from misc.helperRedis import RedisConnection
 from config import redis as redis_conf
+from misc.helperRedis import RedisConnection
 
 
 class RedisConnector:

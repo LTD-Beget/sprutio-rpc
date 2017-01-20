@@ -1,7 +1,7 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
-import traceback
 import os
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class NewFile(BaseWorkerCustomer):
@@ -46,7 +46,7 @@ class NewFile(BaseWorkerCustomer):
                 self.on_success(result)
 
             except Exception as e:
-                result = FTPConnection.get_error(e, str(e))
+                result = ftp_connection.get_error(e, str(e))
                 return self.on_error(result)
 
         except Exception as e:

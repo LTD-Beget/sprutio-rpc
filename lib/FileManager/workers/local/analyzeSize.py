@@ -1,10 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from misc.helpers import get_util
-from misc.helpers import SubprocessRunner
-import traceback
 import os
-import subprocess
 import re
+import subprocess
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from misc.helpers import SubprocessRunner
+from misc.helpers import get_util
 
 
 class AnalyzeSize(BaseWorkerCustomer):

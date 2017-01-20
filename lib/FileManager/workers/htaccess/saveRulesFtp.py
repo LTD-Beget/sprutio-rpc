@@ -1,7 +1,8 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.HtAccess import HtAccess
-import traceback
 import os
+import traceback
+
+from lib.FileManager.HtAccess import HtAccess
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class SaveRulesFtp(BaseWorkerCustomer):

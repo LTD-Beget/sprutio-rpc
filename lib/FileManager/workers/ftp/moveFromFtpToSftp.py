@@ -1,10 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.workers.progress_helper import update_progress
 import os
-import traceback
 import threading
 import time
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.progress_helper import update_progress
 
 
 class MoveFromFtpToSftp(BaseWorkerCustomer):
@@ -179,7 +180,7 @@ class MoveFromFtpToSftp(BaseWorkerCustomer):
     @staticmethod
     def move_from_ftp_to_sftp(ftp, sftp, source_path, target_path):
         """
-        Скачивает файл с source_sftp/source_path
+        Скачивает файл с source_ftp/source_path
         закачивает на sftp/target_path
         удаляет скачанный файл
         :param FTP ftp:

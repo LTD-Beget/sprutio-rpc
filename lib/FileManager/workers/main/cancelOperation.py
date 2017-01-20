@@ -1,10 +1,12 @@
+import pprint
+import signal
+import traceback
+
+import pam
+import psutil
+
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from misc.helpers import kill
-import traceback
-import signal
-import psutil
-import pprint
-import pam
 
 
 class CancelOperation(BaseWorkerCustomer):

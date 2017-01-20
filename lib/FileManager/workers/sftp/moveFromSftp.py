@@ -1,13 +1,13 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.workers.progress_helper import update_progress
 import os
-import stat
-import traceback
-import threading
 import shutil
+import stat
+import threading
 import time
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.progress_helper import update_progress
 
 
 class MoveFromSftp(BaseWorkerCustomer):
@@ -36,6 +36,7 @@ class MoveFromSftp(BaseWorkerCustomer):
 
             source_path = self.source.get('path')
             target_path = self.target.get('path')
+            sftp_home_dir = sftp.get_home_dir()
 
             if source_path is None:
                 raise Exception("Source path empty")
@@ -120,14 +121,14 @@ class MoveFromSftp(BaseWorkerCustomer):
                     elif sftp.isfile(abs_path):
                         try:
                             target_file = os.path.join(target_path, file_basename)
-                            if self.overwrite and not os.path.isdir(target_file):
+                            if os.path.isfile(target_file) and self.overwrite:
                                 os.remove(target_file)
-                                sftp.move(abs_path, target_file)
-                            elif self.overwrite and os.path.isdir(target_file):
+                                sftp.sftp.get(abs_path, target_file)
+                            elif os.path.isdir(target_file) and self.overwrite:
                                 shutil.rmtree(target_file)
-                                sftp.move(abs_path, target_file)
-                            else:
-                                pass
+                                sftp.sftp.get(abs_path, target_file)
+                            elif not os.path.exists(target_file):
+                                sftp.sftp.get(abs_path, target_file)
                             operation_progress["processed"] += 1
                         except Exception as e:
                             self.logger.info("Cannot move file %s , %s" % (abs_path, str(e)))

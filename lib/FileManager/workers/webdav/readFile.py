@@ -1,9 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.WebDavConnection import WebDavConnection
-from config.main import TMP_DIR
-import traceback
 import os
+import traceback
+
 from binaryornot.check import is_binary
+
+from config.main import TMP_DIR
+from lib.FileManager.WebDavConnection import WebDavConnection
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 from misc.helpers import detect_encoding
 
 

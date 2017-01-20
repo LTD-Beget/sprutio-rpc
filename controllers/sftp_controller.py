@@ -1,43 +1,44 @@
+import pprint
+import select
+import traceback
+from multiprocessing import Pipe, Process
+
 from beget_msgpack import Controller
 
+from base.exc import Error
+from lib.FileManager import FM
+from lib.FileManager.OperationStatus import OperationStatus
 from lib.FileManager.workers.sftp.analyzeSize import AnalyzeSize
 from lib.FileManager.workers.sftp.chmodFiles import ChmodFiles
+from lib.FileManager.workers.sftp.copyBetweenSftp import CopyBetweenSftp
+from lib.FileManager.workers.sftp.copyFromSftp import CopyFromSftp
+from lib.FileManager.workers.sftp.copyFromSftpToFtp import CopyFromSftpToFtp
+from lib.FileManager.workers.sftp.copyFromSftpToWebDav import CopyFromSftpToWebDav
+from lib.FileManager.workers.sftp.copySftp import CopySftp
 from lib.FileManager.workers.sftp.createArchive import CreateArchive
 from lib.FileManager.workers.sftp.createConnection import CreateConnection
 from lib.FileManager.workers.sftp.createCopy import CreateCopy
+from lib.FileManager.workers.sftp.downloadFiles import DownloadFiles
 from lib.FileManager.workers.sftp.extractArchive import ExtractArchive
 from lib.FileManager.workers.sftp.findFiles import FindFiles
 from lib.FileManager.workers.sftp.findText import FindText
 from lib.FileManager.workers.sftp.listFiles import ListFiles
 from lib.FileManager.workers.sftp.makeDir import MakeDir
-from lib.FileManager.workers.sftp.newFile import NewFile
-from lib.FileManager.workers.sftp.readFile import ReadFile
-from lib.FileManager.workers.sftp.removeConnection import RemoveConnection
-from lib.FileManager.workers.sftp.removeFiles import RemoveFiles
-from lib.FileManager.workers.sftp.renameFile import RenameFile
-from lib.FileManager.workers.sftp.updateConnection import UpdateConnection
-from lib.FileManager.workers.sftp.writeFile import WriteFile
-from lib.FileManager.workers.sftp.copySftp import CopySftp
-from lib.FileManager.workers.sftp.copyBetweenSftp import CopyBetweenSftp
-from lib.FileManager.workers.sftp.copyFromSftp import CopyFromSftp
-from lib.FileManager.workers.sftp.copyFromSftpToFtp import CopyFromSftpToFtp
-from lib.FileManager.workers.sftp.copyFromSftpToWebDav import CopyFromSftpToWebDav
-from lib.FileManager.workers.sftp.moveSftp import MoveSftp
 from lib.FileManager.workers.sftp.moveBetweenSftp import MoveBetweenSftp
 from lib.FileManager.workers.sftp.moveFromSftp import MoveFromSftp
 from lib.FileManager.workers.sftp.moveFromSftpToFtp import MoveFromSftpToFtp
 from lib.FileManager.workers.sftp.moveFromSftpToWebDav import MoveFromSftpToWebDav
-from lib.FileManager.workers.sftp.downloadFiles import DownloadFiles
+from lib.FileManager.workers.sftp.moveSftp import MoveSftp
+from lib.FileManager.workers.sftp.newFile import NewFile
+from lib.FileManager.workers.sftp.readFile import ReadFile
 from lib.FileManager.workers.sftp.readImages import ReadImages
+from lib.FileManager.workers.sftp.removeConnection import RemoveConnection
+from lib.FileManager.workers.sftp.removeFiles import RemoveFiles
+from lib.FileManager.workers.sftp.renameFile import RenameFile
+from lib.FileManager.workers.sftp.updateConnection import UpdateConnection
 from lib.FileManager.workers.sftp.uploadFile import UploadFile
-from lib.FileManager import FM
-from multiprocessing import Pipe, Process
-from base.exc import Error
+from lib.FileManager.workers.sftp.writeFile import WriteFile
 from misc.helpers import byte_to_unicode_list, byte_to_unicode_dict
-import pprint
-import select
-import traceback
-from lib.FileManager.OperationStatus import OperationStatus
 
 
 class SftpController(Controller):

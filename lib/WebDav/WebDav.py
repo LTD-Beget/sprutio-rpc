@@ -1,15 +1,17 @@
-import os
+import datetime
 import ftplib
+import os
+import signal
+import time
 import traceback
+from multiprocessing import Process, JoinableQueue, Queue
+
+import psutil
 import webdav.client as wc
 import webdav.urn as urn
-import datetime
-import time
-import psutil
-import signal
-from misc.helpers import kill
-from multiprocessing import Process, JoinableQueue, Queue
+
 from lib.FileManager.FM import REQUEST_DELAY
+from misc.helpers import kill
 
 TIMEOUT_LIMIT = 10
 

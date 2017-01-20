@@ -1,8 +1,9 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.WebDavConnection import WebDavConnection
-from lib.FileManager.FM import REQUEST_DELAY
-import traceback
 import time
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.WebDavConnection import WebDavConnection
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class RemoveFiles(BaseWorkerCustomer):

@@ -1,17 +1,19 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.SevenZFile import SevenZFile
-import traceback
+import gzip
 import os
-import time
 import pprint
 import threading
+import time
+import traceback
+
 import libarchive
-import rarfile
-from lib.FileManager.ZipFile import ZipFile, is_zipfile
-from lib.FileManager.LibArchiveEntry import Entry
 import pyinotify
-import gzip
+import rarfile
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.LibArchiveEntry import Entry
+from lib.FileManager.SevenZFile import SevenZFile
+from lib.FileManager.ZipFile import ZipFile, is_zipfile
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ExtractArchive(BaseWorkerCustomer):

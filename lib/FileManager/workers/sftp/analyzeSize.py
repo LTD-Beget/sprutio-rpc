@@ -1,8 +1,8 @@
 import os
 import re
 import traceback
+
 from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
 from misc.helpers import get_util
 
 

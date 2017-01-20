@@ -1,14 +1,16 @@
-from beget_msgpack import Controller
 import pprint
 import select
 from multiprocessing import Pipe
+
+from beget_msgpack import Controller
+
+from lib.FileManager.OperationStatus import OperationStatus
+from lib.FileManager.workers.main.Authenticate import Authenticate
+from lib.FileManager.workers.main.cancelOperation import CancelOperation
+from lib.FileManager.workers.main.initCallback import InitCallback
+from lib.FileManager.workers.main.initSession import InitSession
 from lib.FileManager.workers.main.loadSettings import LoadSettings
 from lib.FileManager.workers.main.saveSettings import SaveSettings
-from lib.FileManager.workers.main.initSession import InitSession
-from lib.FileManager.workers.main.initCallback import InitCallback
-from lib.FileManager.workers.main.cancelOperation import CancelOperation
-from lib.FileManager.workers.main.Authenticate import Authenticate
-from lib.FileManager.OperationStatus import OperationStatus
 from misc.helpers import byte_to_unicode_dict
 
 

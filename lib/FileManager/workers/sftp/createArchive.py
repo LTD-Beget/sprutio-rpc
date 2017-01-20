@@ -1,5 +1,6 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class CreateArchive(BaseWorkerCustomer):
@@ -24,7 +25,7 @@ class CreateArchive(BaseWorkerCustomer):
 
             archive_name = "\"" + self.path + "." + archive_type + "\""
 
-            files_string = "\"" + "\" \"".join([d['path'][2:] for d in self.file_items]) + "\""
+            files_string = "\"" + "\" \"".join([d['path'].replace("./", "", 1) for d in self.file_items]) + "\""
             full_command = " ".join([self.get_command(self.type), archive_name, files_string])
 
             status = sftp.run(full_command)

@@ -1,9 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from config.main import TMP_DIR
-import traceback
 import os
 import shutil
 import stat
+import traceback
+
+from config.main import TMP_DIR
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ReadImages(BaseWorkerCustomer):

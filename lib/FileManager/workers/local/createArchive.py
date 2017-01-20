@@ -1,9 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FM import REQUEST_DELAY
-import traceback
 import os
 import time
+import traceback
+
 import libarchive
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class CreateArchive(BaseWorkerCustomer):

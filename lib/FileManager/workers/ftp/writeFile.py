@@ -1,11 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FTPConnection import FTPConnection
-from misc.helperUnicode import as_bytes
-import traceback
+import os
 import pprint
 import random
-import os
 import shutil
+import traceback
+
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from misc.helperUnicode import as_bytes
 
 
 class WriteFile(BaseWorkerCustomer):
@@ -41,7 +41,7 @@ class WriteFile(BaseWorkerCustomer):
                 ftp_connection.download(abs_path, temp_dir)
             except Exception as e:
                 ftp_connection.close()
-                result = FTPConnection.get_error(e,
+                result = ftp_connection.get_error(e,
                                                  "Unable to make file backup before saving \"%s\"." % os.path.basename(
                                                      abs_path))
                 self.on_error(result)
@@ -78,14 +78,14 @@ class WriteFile(BaseWorkerCustomer):
                     ftp_connection.upload(os.path.join(temp_dir, os.path.basename(abs_path)), abs_path, True)
                 except Exception as e:
                     ftp_connection.close()
-                    result = FTPConnection.get_error(e,
-                                                     "Unable to upload tmp file during write error \"%s\"."
-                                                     % os.path.basename(abs_path))
+                    result = ftp_connection.get_error(e,
+                                                      "Unable to upload tmp file during write error \"%s\"."
+                                                      % os.path.basename(abs_path))
                     self.on_error(result)
                     return
 
                 ftp_connection.close()
-                result = FTPConnection.get_error(e, "Unable to write file \"%s\"." % os.path.basename(abs_path))
+                result = ftp_connection.get_error(e, "Unable to write file \"%s\"." % os.path.basename(abs_path))
                 self.on_error(result)
                 return
 

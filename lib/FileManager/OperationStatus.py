@@ -1,8 +1,9 @@
-from misc.RedisConnector import RedisConnector
-from datetime import datetime
+import json
 import random
 import time
-import json
+from datetime import datetime
+
+from misc.RedisConnector import RedisConnector
 
 
 class OperationStatus(object):

@@ -1,11 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.FM import Module, Action
-from lib.FileManager.FTPConnection import FTPConnection
-from lib.FileManager.SFTPConnection import SFTPConnection
-from lib.FileManager.WebDavConnection import WebDavConnection
-import traceback
-import threading
 import os
+import threading
+import traceback
+
+from lib.FileManager.FM import Module, Action
+from lib.FileManager.WebDavConnection import WebDavConnection
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class InitSession(BaseWorkerCustomer):
@@ -106,8 +105,8 @@ class InitSession(BaseWorkerCustomer):
                 Action.EDIT: True,
                 Action.HELP: True,
                 Action.HOME: True,
-                Action.HTPASSWD: True,
-                Action.IP_BLOCK: False,
+                Action.HTPASSWD: False,
+                Action.IP_BLOCK: True,
                 Action.LOCAL: False,
                 Action.LOGOUT: False,
                 Action.MOVE: True,
@@ -194,8 +193,8 @@ class InitSession(BaseWorkerCustomer):
                 Action.EDIT: True,
                 Action.EXTRACT_ARCHIVE: True,
                 Action.HOME: True,
-                Action.HTPASSWD: True,
-                Action.IP_BLOCK: False,
+                Action.HTPASSWD: False,
+                Action.IP_BLOCK: True,
                 Action.HELP: True,
                 Action.LOCAL: False,
                 Action.LOGOUT: False,

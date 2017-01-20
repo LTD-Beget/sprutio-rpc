@@ -1,12 +1,13 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.WebDavConnection import WebDavConnection
-from misc.helperUnicode import as_bytes
-import traceback
+import os
 import pprint
 import random
-from config.main import TMP_DIR
-import os
 import shutil
+import traceback
+
+from config.main import TMP_DIR
+from lib.FileManager.WebDavConnection import WebDavConnection
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from misc.helperUnicode import as_bytes
 
 
 class WriteFile(BaseWorkerCustomer):

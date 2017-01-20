@@ -1,10 +1,11 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.WebDavConnection import WebDavConnection
-from lib.FileManager.workers.progress_helper import update_progress
-from lib.FileManager.FM import REQUEST_DELAY
-import traceback
 import threading
 import time
+import traceback
+
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.WebDavConnection import WebDavConnection
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
+from lib.FileManager.workers.progress_helper import update_progress
 
 
 class MoveWebDav(BaseWorkerCustomer):

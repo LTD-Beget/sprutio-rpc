@@ -1,9 +1,10 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from config.main import TMP_DIR
-import traceback
 import os
-import subprocess
 import shutil
+import subprocess
+import traceback
+
+from config.main import TMP_DIR
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class DownloadFiles(BaseWorkerCustomer):

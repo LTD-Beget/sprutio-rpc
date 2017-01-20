@@ -1,18 +1,19 @@
-import psutil
-import socket
 import os
-import subprocess
 import pwd
-import time
-import signal
-from queue import Queue
-from misc.helperUnicode import as_default_string, as_unicode
-from base.exc import Error
-from threading import Thread
-import chardet
 import re
-from lib.FileManager import FM
+import signal
+import socket
+import subprocess
+import time
+from queue import Queue
+from threading import Thread
 
+import chardet
+import psutil
+
+from base.exc import Error
+from lib.FileManager import FM
+from misc.helperUnicode import as_default_string, as_unicode
 
 # чем больше - тем точнее определяется кодировка, но медленнее, 50000 - выбрано опытным путем
 CHARSET_DETECT_BUFFER = 50000

@@ -1,21 +1,21 @@
-from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
-from lib.FileManager.SFTPConnection import SFTPConnection
-from lib.FileManager.FM import REQUEST_DELAY
-from lib.FileManager.SevenZFile import SevenZFile
-from config.main import TMP_DIR
-
-import shutil
-import traceback
-import os
-import time
-import pprint
-import threading
-import libarchive
-import rarfile
-from lib.FileManager.ZipFile import ZipFile, is_zipfile
-from lib.FileManager.LibArchiveEntry import Entry
-import pyinotify
 import gzip
+import os
+import pprint
+import shutil
+import threading
+import time
+import traceback
+
+import libarchive
+import pyinotify
+import rarfile
+
+from config.main import TMP_DIR
+from lib.FileManager.FM import REQUEST_DELAY
+from lib.FileManager.LibArchiveEntry import Entry
+from lib.FileManager.SevenZFile import SevenZFile
+from lib.FileManager.ZipFile import ZipFile, is_zipfile
+from lib.FileManager.workers.baseWorkerCustomer import BaseWorkerCustomer
 
 
 class ExtractArchive(BaseWorkerCustomer):

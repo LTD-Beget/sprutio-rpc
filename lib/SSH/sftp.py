@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-import traceback
-import os
-import stat
-import shutil
+import base64
 import datetime
 import hashlib
-import base64
+import os
+import shutil
+import stat
+import traceback
+
 from binaryornot.helpers import is_binary_string
 
 from lib.SSH.ssh import SSH
